@@ -7,6 +7,7 @@ export type MarriageType = 'Ordinance' | 'Customary';
 
 export interface Member {
   id: string;
+  groups?: string[];
   member_code: string | null;
   title: string | null;
   title_other: string | null;

@@ -62,18 +62,23 @@ export default function ContactsPage() {
     try {
       const result = await getMembers({ page, pageSize: PAGE_SIZE, search, status, groupId: effectiveGroupId, distant });
       if (requestId !== requestSequence.current) return;
-      setMembers(result.members);
+      let filtered = result.members;
+      if (restricted) {
+        filtered = filtered.filter((m) => m.groups?.some((g: string) => g.toLowerCase().includes(restricted.toLowerCase())));
+      }
+      setMembers(filtered);
       setTotalCount(result.totalCount);
       if (result.members.length === 0 && page > 1 && (page - 1) * PAGE_SIZE >= result.totalCount) {
         setPage(Math.max(1, Math.ceil(result.totalCount / PAGE_SIZE)));
       }
     } catch (caughtError) {
       if (requestId !== requestSequence.current) return;
-      const message = caughtError instanceof Error ? caughtError.message : 'Unable to load members.';
+      const err = caughtError as { message?: string } | null;
+      const message = err?.message || String(caughtError);
       setMembers([]);
       setTotalCount(0);
       setError(message);
-      showToast('Could not load contacts. Check your connection and access permissions.', 'error');
+      showToast(`Could not load contacts: ${message}`, 'error');
     } finally {
       if (requestId === requestSequence.current) setLoading(false);
     }

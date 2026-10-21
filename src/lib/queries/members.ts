@@ -9,7 +9,7 @@ export async function getMembers(filters: MemberFilters = {}): Promise<{ members
   const start = (page - 1) * pageSize;
   let query = supabase
     .from('members')
-    .select(memberColumns, { count: 'exact' })
+    .select(`${memberColumns},member_groups(membership_status,groups(name))`, { count: 'exact' })
     .order('surname', { ascending: true })
     .order('first_name', { ascending: true });
 
@@ -33,10 +33,23 @@ export async function getMembers(filters: MemberFilters = {}): Promise<{ members
     query = query.in('id', memberIds);
   }
 
-  const { data, error, count } = await query.range(start, start + pageSize - 1);
-  if (error) throw error;
+  try {
+    const { data, error, count } = await query.range(start, start + pageSize - 1);
+    if (error) throw new Error(error.message || error.details || String(error));
 
-  return { members: (data ?? []) as unknown as Member[], totalCount: count ?? 0 };
+    const rows = ((data as any[]) || []).map((row) => {
+      const { member_groups: memberGroups, ...member } = row;
+      const groups = ((memberGroups as any[]) || [])
+        .filter((mg) => mg?.membership_status !== 'Inactive')
+        .map((mg) => mg?.groups?.name)
+        .filter((name): name is string => Boolean(name));
+      return { ...member, groups } as Member;
+    });
+    return { members: rows, totalCount: count ?? 0 };
+  } catch (err) {
+    const e = err as { message?: string; details?: string } | null;
+    throw new Error(e?.message || e?.details || String(err));
+  }
 }
 
 /** Retrieve the full member set for the unfiltered directory CSV export. */
