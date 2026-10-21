@@ -7,7 +7,7 @@ import EmptyState from '../components/ui/EmptyState';
 import ExportButton from '../components/ui/ExportButton';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../features/auth/AuthContext';
-import { getUsers, updateUserRole, updateUserStatus, type SystemUser } from '../lib/queries/users';
+import { ASSIGNABLE_GROUPS, getUsers, updateUserAssignedGroup, updateUserRole, updateUserStatus, type SystemUser } from '../lib/queries/users';
 
 export default function UsersPage() {
   const navigate = useNavigate();
@@ -51,6 +51,19 @@ export default function UsersPage() {
     }
   };
 
+  const changeGroup = async (account: SystemUser, group: string) => {
+    setBusyUserId(account.id);
+    try {
+      await updateUserAssignedGroup(account.id, group);
+      showToast(`${account.full_name || account.email || 'User'} ${group ? `assigned to ${group}` : 'has no assigned group'}.`, 'success');
+      await loadUsers();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to update assigned group.', 'error');
+    } finally {
+      setBusyUserId(null);
+    }
+  };
+
   const toggleStatus = async (account: SystemUser) => {
     setBusyUserId(account.id);
     try {
@@ -77,12 +90,12 @@ export default function UsersPage() {
 
       <section className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm" aria-label="System users table">
         <div className="flex items-center justify-between gap-3 border-b border-stone-100 px-5 py-4"><div><h2 className="font-semibold text-slate-900">User accounts</h2><p className="mt-0.5 text-xs text-slate-500">{users.length} registered {users.length === 1 ? 'account' : 'accounts'}</p></div><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><UsersRound aria-hidden="true" size={18} /></span></div>
-        {loading ? <div className="animate-pulse px-6 py-16 text-center text-sm font-medium text-slate-500">Loading users...</div> : users.length === 0 ? <EmptyState title="No system users found" description="Profiles linked to Supabase Auth accounts will appear here." /> : <div className="overflow-x-auto"><table className="w-full min-w-[800px] border-collapse text-left"><thead className="bg-stone-50 text-[11px] font-bold uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3.5">User</th><th className="px-4 py-3.5">Role</th><th className="px-4 py-3.5">Status</th><th className="px-4 py-3.5">Date Added</th><th className="px-4 py-3.5 text-right">Actions</th></tr></thead><tbody className="divide-y divide-stone-100">{users.map((account) => {
+        {loading ? <div className="animate-pulse px-6 py-16 text-center text-sm font-medium text-slate-500">Loading users...</div> : users.length === 0 ? <EmptyState title="No system users found" description="Profiles linked to Supabase Auth accounts will appear here." /> : <div className="overflow-x-auto"><table className="w-full min-w-[800px] border-collapse text-left"><thead className="bg-stone-50 text-[11px] font-bold uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3.5">User</th><th className="px-4 py-3.5">Role</th><th className="px-4 py-3.5">Assigned Group</th><th className="px-4 py-3.5">Status</th><th className="px-4 py-3.5">Date Added</th><th className="px-4 py-3.5 text-right">Actions</th></tr></thead><tbody className="divide-y divide-stone-100">{users.map((account) => {
           const isCurrentUser = account.id === user?.id;
           const busy = busyUserId === account.id;
           const name = account.full_name || 'Name not provided';
           const initials = (account.full_name || account.email || 'U').split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'U';
-          return <tr key={account.id} className="transition-colors hover:bg-accent/50"><td className="px-5 py-4"><div className="flex items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primaryDark">{initials}</span><span className="min-w-0"><span className="block truncate text-sm font-semibold text-slate-900">{name}{isCurrentUser && <span className="ml-2 text-[10px] font-medium text-primary">You</span>}</span><span className="mt-0.5 block truncate text-xs text-slate-500">{account.email || 'No email recorded'}</span></span></div></td><td className="px-4 py-4"><Badge variant={account.role === 'admin' ? 'primary' : 'gray'}><span className="inline-flex items-center gap-1.5">{account.role === 'admin' && <ShieldCheck aria-hidden="true" size={13} />}{account.role === 'admin' ? 'Admin' : 'User'}</span></Badge></td><td className="px-4 py-4"><Badge variant={account.is_active ? 'active' : 'inactive'}>{account.is_active ? 'Active' : 'Inactive'}</Badge></td><td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">{new Date(account.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</td><td className="px-4 py-4"><div className="flex justify-end gap-2"><Button type="button" size="sm" variant="outline" loading={busy} disabled={busy || isCurrentUser} title={isCurrentUser ? 'You cannot change your own role.' : undefined} onClick={() => void toggleRole(account)}>{account.role === 'admin' ? 'Make User' : 'Make Admin'}</Button><Button type="button" size="sm" variant={account.is_active ? 'ghost' : 'secondary'} loading={busy} disabled={busy || isCurrentUser} title={isCurrentUser ? 'You cannot change your own account status.' : undefined} onClick={() => void toggleStatus(account)}>{account.is_active ? 'Deactivate' : 'Activate'}</Button></div></td></tr>;
+          return <tr key={account.id} className="transition-colors hover:bg-accent/50"><td className="px-5 py-4"><div className="flex items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primaryDark">{initials}</span><span className="min-w-0"><span className="block truncate text-sm font-semibold text-slate-900">{name}{isCurrentUser && <span className="ml-2 text-[10px] font-medium text-primary">You</span>}</span><span className="mt-0.5 block truncate text-xs text-slate-500">{account.email || 'No email recorded'}</span></span></div></td><td className="px-4 py-4"><Badge variant={account.role === 'admin' ? 'primary' : 'gray'}><span className="inline-flex items-center gap-1.5">{account.role === 'admin' && <ShieldCheck aria-hidden="true" size={13} />}{account.role === 'admin' ? 'Admin' : 'User'}</span></Badge></td><td className="px-4 py-4"><select aria-label={`Assigned group for ${name}`} value={account.assigned_group ?? ''} disabled={busy} onChange={(event) => void changeGroup(account, event.target.value)} className="h-9 rounded-lg border border-stone-200 bg-white px-2 text-sm text-slate-700 outline-none focus:border-primary/50 disabled:opacity-60"><option value="">None</option>{ASSIGNABLE_GROUPS.map((group) => <option key={group} value={group}>{group}</option>)}</select></td><td className="px-4 py-4"><Badge variant={account.is_active ? 'active' : 'inactive'}>{account.is_active ? 'Active' : 'Inactive'}</Badge></td><td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">{new Date(account.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</td><td className="px-4 py-4"><div className="flex justify-end gap-2"><Button type="button" size="sm" variant="outline" loading={busy} disabled={busy || isCurrentUser} title={isCurrentUser ? 'You cannot change your own role.' : undefined} onClick={() => void toggleRole(account)}>{account.role === 'admin' ? 'Make User' : 'Make Admin'}</Button><Button type="button" size="sm" variant={account.is_active ? 'ghost' : 'secondary'} loading={busy} disabled={busy || isCurrentUser} title={isCurrentUser ? 'You cannot change your own account status.' : undefined} onClick={() => void toggleStatus(account)}>{account.is_active ? 'Deactivate' : 'Activate'}</Button></div></td></tr>;
         })}</tbody></table></div>}
       </section>
     </div>

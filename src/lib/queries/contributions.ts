@@ -9,7 +9,7 @@ import {
 } from '../../types/contributions';
 
 const baseColumns = 'id,member_id,guest_name,category,amount,payment_method,payment_date,reference_number,notes,recorded_by,created_at';
-const memberJoin = 'members(id,first_name,surname,mobile_phone)';
+const memberJoin = 'members(id,first_name,surname,mobile_phone,member_groups(membership_status,groups(name)))';
 const withProfile = `${baseColumns},${memberJoin},profiles:recorded_by(full_name)`;
 const withoutProfile = `${baseColumns},${memberJoin}`;
 
@@ -35,7 +35,16 @@ function buildPayload(input: ContributionFormData) {
 
 function normalize(row: unknown): Contribution {
   const r = row as Contribution;
-  return { ...r, amount: Number(r.amount), members: r.members ?? null, profiles: r.profiles ?? null };
+  let members = r.members ?? null;
+  if (members) {
+    const memberGroups = (members as unknown as { member_groups?: { membership_status?: string | null; groups: { name: string | null } | null }[] }).member_groups;
+    const groups = (memberGroups ?? [])
+      .filter((mg) => mg.membership_status !== 'Inactive')
+      .map((mg) => mg.groups?.name)
+      .filter((name): name is string => Boolean(name));
+    members = { ...members, groups };
+  }
+  return { ...r, amount: Number(r.amount), members, profiles: r.profiles ?? null };
 }
 
 export async function fetchContributions(filters: ContributionFilters = {}): Promise<Contribution[]> {

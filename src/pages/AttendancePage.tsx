@@ -12,7 +12,7 @@ import MemberCheckInModal from '../components/MemberCheckInModal';
 import { useAuth } from '../features/auth/AuthContext';
 import { exportToCSV } from '../lib/csv';
 import { getErrorMessage } from '../lib/errors';
-import { canDelete, canEdit } from '../lib/permissions';
+import { canDelete, canEdit, restrictedGroup } from '../lib/permissions';
 import {
   createAttendanceSession,
   deleteAttendanceSession,
@@ -42,7 +42,8 @@ function displayDate(value: string | null): string {
 }
 
 export default function AttendancePage() {
-  const { role, user } = useAuth();
+  const { role, user, userGroup } = useAuth();
+  const restricted = restrictedGroup(role, userGroup);
   const { showToast } = useToast();
   const [tab, setTab] = useState<'sessions' | 'absentees'>('sessions');
   const [sessions, setSessions] = useState<AttendanceSession[]>([]);
@@ -73,9 +74,9 @@ export default function AttendancePage() {
         fetchAttendanceSummary(),
         fetchAbsenteeMembers(ABSENT_THRESHOLD),
       ]);
-      setSessions(list);
+      setSessions(restricted ? list.filter((s) => s.service_type.includes(restricted)) : list);
       setSummary(stats);
-      setAbsentees(missing);
+      setAbsentees(restricted ? missing.filter((a) => a.groups?.includes(restricted)) : missing);
     } catch (err) {
       console.error('Failed to load attendance', err);
       setSessions([]);
@@ -83,7 +84,7 @@ export default function AttendancePage() {
     } finally {
       setLoading(false);
     }
-  }, [serviceType, startDate, endDate, showToast]);
+  }, [serviceType, startDate, endDate, showToast, restricted]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 250);

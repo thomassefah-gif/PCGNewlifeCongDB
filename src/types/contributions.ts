@@ -17,6 +17,7 @@ export interface ContributionMember {
   first_name: string | null;
   surname: string | null;
   mobile_phone: string | null;
+  groups?: string[];
 }
 
 export interface Contribution {

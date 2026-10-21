@@ -7,6 +7,7 @@ export interface SystemUser {
   full_name: string | null;
   role: UserRole;
   is_active: boolean;
+  assigned_group: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -14,7 +15,7 @@ export interface SystemUser {
 export async function getUsers(): Promise<SystemUser[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,email,full_name,role,is_active,created_at,updated_at')
+    .select('id,email,full_name,role,is_active,assigned_group,created_at,updated_at')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as SystemUser[];
@@ -22,6 +23,13 @@ export async function getUsers(): Promise<SystemUser[]> {
 
 export async function updateUserRole(id: string, role: UserRole): Promise<void> {
   const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
+  if (error) throw error;
+}
+
+export const ASSIGNABLE_GROUPS = ['Children Service', 'Junior Youth (JY)', 'YPG', 'YAF', 'Womens Fellowship', 'Mens Fellowship'] as const;
+
+export async function updateUserAssignedGroup(id: string, assigned_group: string): Promise<void> {
+  const { error } = await supabase.from('profiles').update({ assigned_group: assigned_group || null }).eq('id', id);
   if (error) throw error;
 }
 

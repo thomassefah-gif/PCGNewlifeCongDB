@@ -9,12 +9,14 @@ export interface Profile {
   full_name: string | null;
   role: UserRole;
   is_active: boolean;
+  assigned_group: string | null;
 }
 
 interface AuthContextValue {
   user: User | null;
   profile: Profile | null;
   role: Profile['role'] | null;
+  userGroup: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -28,7 +30,7 @@ async function fetchProfile(currentUser: User | null): Promise<Profile | null> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,email,full_name,role,is_active')
+    .select('id,email,full_name,role,is_active,assigned_group')
     .eq('id', currentUser.id)
     .maybeSingle();
 
@@ -112,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     profile,
     role: profile?.role ?? null,
+    userGroup: profile?.assigned_group?.trim() || null,
     loading,
     signIn,
     signOut,

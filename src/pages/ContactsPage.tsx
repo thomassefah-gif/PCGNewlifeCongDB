@@ -12,6 +12,7 @@ import { deleteMember, getAllGroups, getAllMembers, getMembers } from '../lib/qu
 import { exportToCSV } from '../lib/csv';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../features/auth/AuthContext';
+import { restrictedGroup } from '../lib/permissions';
 import type { DistantFilter, Group, Member, MemberStatusFilter } from '../types/member';
 
 const PAGE_SIZE = 25;
@@ -23,7 +24,8 @@ function memberName(member: Member): string {
 export default function ContactsPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { role } = useAuth();
+  const { role, userGroup } = useAuth();
+  const restricted = restrictedGroup(role, userGroup);
   const [members, setMembers] = useState<Member[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -41,12 +43,24 @@ export default function ContactsPage() {
   const [exportingAll, setExportingAll] = useState(false);
   const requestSequence = useRef(0);
 
+  const restrictedId = restricted ? groups.find((group) => group.name === restricted)?.id ?? null : null;
+  const effectiveGroupId = restricted ? restrictedId ?? 'ALL' : groupId;
+
   const fetchMembers = useCallback(async () => {
+    if (restricted) {
+      if (groupsLoading) return;
+      if (!restrictedId) {
+        setMembers([]);
+        setTotalCount(0);
+        setLoading(false);
+        return;
+      }
+    }
     const requestId = ++requestSequence.current;
     setLoading(true);
     setError(null);
     try {
-      const result = await getMembers({ page, pageSize: PAGE_SIZE, search, status, groupId, distant });
+      const result = await getMembers({ page, pageSize: PAGE_SIZE, search, status, groupId: effectiveGroupId, distant });
       if (requestId !== requestSequence.current) return;
       setMembers(result.members);
       setTotalCount(result.totalCount);
@@ -63,7 +77,7 @@ export default function ContactsPage() {
     } finally {
       if (requestId === requestSequence.current) setLoading(false);
     }
-  }, [distant, groupId, page, search, showToast, status]);
+  }, [distant, effectiveGroupId, groupsLoading, page, restricted, restrictedId, search, showToast, status]);
 
   useEffect(() => {
     void fetchMembers();
@@ -137,7 +151,20 @@ export default function ContactsPage() {
   const handleExportAll = async () => {
     setExportingAll(true);
     try {
-      const allMembers = await getAllMembers();
+      let allMembers: Member[];
+      if (restricted) {
+        if (!restrictedId) { allMembers = []; } else {
+          const first = await getMembers({ page: 1, pageSize: 1000, groupId: restrictedId });
+          allMembers = first.members;
+          for (let nextPage = 2; allMembers.length < first.totalCount; nextPage += 1) {
+            const next = await getMembers({ page: nextPage, pageSize: 1000, groupId: restrictedId });
+            if (next.members.length === 0) break;
+            allMembers.push(...next.members);
+          }
+        }
+      } else {
+        allMembers = await getAllMembers();
+      }
       exportToCSV(allMembers, { filename: 'members', isMemberData: true });
     } catch (caughtError) {
       showToast(caughtError instanceof Error ? caughtError.message : 'Unable to export members.', 'error');
@@ -188,7 +215,7 @@ export default function ContactsPage() {
           <option value="ALL">All statuses</option><option value="Active">Active</option><option value="Inactive">Inactive</option>
         </select>
         <label className="sr-only" htmlFor="member-group-filter">Filter by group</label>
-        <select id="member-group-filter" value={groupId} onChange={(event) => changeGroup(event.target.value)} disabled={groupsLoading} className="h-10 rounded-xl border border-stone-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 disabled:opacity-60">
+        <select id="member-group-filter" value={restricted ? restrictedId ?? 'ALL' : groupId} onChange={(event) => changeGroup(event.target.value)} disabled={groupsLoading || Boolean(restricted)} className="h-10 rounded-xl border border-stone-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 disabled:opacity-60">
           <option value="ALL">All groups</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
         </select>
         <label className="sr-only" htmlFor="member-distant-filter">Filter by distant status</label>

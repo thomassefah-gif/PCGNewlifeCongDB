@@ -11,7 +11,7 @@ import ReceiptModal from '../components/ReceiptModal';
 import { useAuth } from '../features/auth/AuthContext';
 import { exportToCSV } from '../lib/csv';
 import { formatCedi } from '../lib/currency';
-import { canDelete, canEdit } from '../lib/permissions';
+import { canDelete, canEdit, restrictedGroup } from '../lib/permissions';
 import {
   contributorName,
   createContribution,
@@ -47,7 +47,8 @@ function displayDate(value: string): string {
 }
 
 export default function ContributionsPage() {
-  const { role, user, profile } = useAuth();
+  const { role, user, profile, userGroup } = useAuth();
+  const restricted = restrictedGroup(role, userGroup);
   const { showToast } = useToast();
   const [rows, setRows] = useState<Contribution[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +74,7 @@ export default function ContributionsPage() {
         fetchContributions({ search, category, startDate, endDate }),
         fetchContributionSummary(),
       ]);
-      setRows(list);
+      setRows(restricted ? list.filter((row) => row.members?.groups?.includes(restricted)) : list);
       setSummary(overall);
     } catch (err) {
       console.error('Failed to load contributions', err);
@@ -82,7 +83,7 @@ export default function ContributionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, category, startDate, endDate, showToast]);
+  }, [search, category, startDate, endDate, showToast, restricted]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 250);

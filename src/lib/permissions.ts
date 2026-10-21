@@ -2,6 +2,11 @@ import type { UserRole } from '../types/auth';
 
 export type { UserRole } from '../types/auth';
 
+/** The group a non-admin user is restricted to, or null when no restriction applies. */
+export function restrictedGroup(role?: UserRole | null, userGroup?: string | null): string | null {
+  return role !== 'admin' && userGroup?.trim() ? userGroup.trim() : null;
+}
+
 export function canView(role?: UserRole | null): boolean {
   return role === 'admin' || role === 'user' || role === 'viewer';
 }
