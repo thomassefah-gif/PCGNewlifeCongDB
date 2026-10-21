@@ -10,7 +10,6 @@ import ContributionModal from '../components/ContributionModal';
 import ReceiptModal from '../components/ReceiptModal';
 import { useAuth } from '../features/auth/AuthContext';
 import { exportToCSV } from '../lib/csv';
-import { getErrorMessage } from '../lib/errors';
 import { formatCedi } from '../lib/currency';
 import { canDelete, canEdit } from '../lib/permissions';
 import {
@@ -39,7 +38,8 @@ const emptySummary: ContributionSummary = {
 
 const fieldClass = 'rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
 
-const errorMessage = getErrorMessage;
+const errorMessage = (err: any): string =>
+  err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
 
 function displayDate(value: string): string {
   const d = parseISO(value);

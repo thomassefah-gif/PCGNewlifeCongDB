@@ -13,6 +13,10 @@ const memberJoin = 'members(id,first_name,surname,mobile_phone)';
 const withProfile = `${baseColumns},${memberJoin},profiles:recorded_by(full_name)`;
 const withoutProfile = `${baseColumns},${memberJoin}`;
 
+function toError(error: { message?: string; details?: string }): Error {
+  return new Error(error.message || error.details || String(error));
+}
+
 function normalize(row: unknown): Contribution {
   const r = row as Contribution;
   return { ...r, amount: Number(r.amount), members: r.members ?? null, profiles: r.profiles ?? null };
@@ -33,7 +37,7 @@ export async function fetchContributions(filters: ContributionFilters = {}): Pro
   let { data, error } = await run(withProfile);
   // The profiles relationship may not exist; fall back to the member-only join.
   if (error) ({ data, error } = await run(withoutProfile));
-  if (error) throw error;
+  if (error) throw toError(error);
 
   let rows = (data ?? []).map(normalize);
   const search = filters.search?.trim().toLowerCase();
@@ -60,7 +64,7 @@ export async function fetchContributionSummary(): Promise<ContributionSummary> {
       .from('contributions')
       .select('id,category,amount,payment_date')
       .range(start, start + pageSize - 1);
-    if (error) throw error;
+    if (error) throw toError(error);
     const page = (data ?? []) as unknown as Contribution[];
     rows.push(...page.map((r) => ({ ...r, amount: Number(r.amount) })));
     if (page.length < pageSize) break;
@@ -74,20 +78,25 @@ export async function createContribution(
   userEmail: string | null,
   userName: string | null,
 ): Promise<Contribution> {
+  const payload = { ...input, recorded_by: userId };
   const { data, error } = await supabase
     .from('contributions')
-    .insert({ ...input, recorded_by: userId })
-    .select(withoutProfile)
+    .insert(payload)
+    .select('*')
     .single();
-  if (error) throw error;
+  if (error) throw toError(error);
   const created = normalize(data);
-  await logAuditEvent({
-    action: 'create',
-    entity_type: 'contribution',
-    entity_id: created.id,
-    entity_label: `${created.category} - ${created.amount}`,
-    changes: { ...input, performed_by: { userId, userEmail, userName } },
-  });
+  try {
+    await logAuditEvent({
+      action: 'create',
+      entity_type: 'contribution',
+      entity_id: created.id,
+      entity_label: `${created.category} - ${created.amount}`,
+      changes: { ...input, performed_by: { userId, userEmail, userName } },
+    });
+  } catch (auditError) {
+    console.error('Audit logging failed for contribution create', auditError);
+  }
   return created;
 }
 
@@ -99,7 +108,7 @@ export async function updateContribution(
   userName: string | null,
 ): Promise<void> {
   const { error } = await supabase.from('contributions').update(input).eq('id', id);
-  if (error) throw error;
+  if (error) throw toError(error);
   await logAuditEvent({
     action: 'update',
     entity_type: 'contribution',
@@ -117,7 +126,7 @@ export async function deleteContribution(
 ): Promise<void> {
   const { data: existing } = await supabase.from('contributions').select('category,amount').eq('id', id).maybeSingle();
   const { error } = await supabase.from('contributions').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw toError(error);
   await logAuditEvent({
     action: 'delete',
     entity_type: 'contribution',
