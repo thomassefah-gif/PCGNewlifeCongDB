@@ -18,6 +18,24 @@ interface MemberCheckInModalProps {
 const nameOf = (m: { first_name: string | null; surname: string | null }) =>
   `${m.surname ?? ''} ${m.first_name ?? ''}`.trim() || 'Unnamed member';
 
+const getTargetGroup = (serviceType: string): string | null => {
+  const type = serviceType.toLowerCase();
+  if (type.includes('jy') || type.includes('junior youth')) return 'jy';
+  if (type.includes('children')) return 'children';
+  if (type.includes('yaf')) return 'yaf';
+  if (type.includes('ypg')) return 'ypg';
+  if (type.includes('womens')) return 'women';
+  if (type.includes('mens')) return 'men';
+  return null; // Sunday Main Service, Bible Study and Other show all members
+};
+
+const inTargetGroup = (groups: string[] | undefined, target: string): boolean =>
+  (groups ?? []).some((g) => {
+    const name = g.toLowerCase();
+    // "men" is a substring of "women"
+    return name.includes(target) && !(target === 'men' && name.includes('women'));
+  });
+
 function GroupBadges({ groups }: { groups?: string[] }) {
   if (!groups || groups.length === 0) return <span className="text-[10px] italic text-slate-400">No Group</span>;
   return (
@@ -36,6 +54,7 @@ export default function MemberCheckInModal({ session, userId, readOnly = false, 
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const sessionId = session?.id;
 
@@ -56,17 +75,21 @@ export default function MemberCheckInModal({ session, userId, readOnly = false, 
 
   useEffect(() => {
     setSearch('');
+    setShowAll(false);
     void load();
   }, [load]);
+
+  const targetGroup = session ? getTargetGroup(session.service_type) : null;
 
   const checkedIds = useMemo(() => new Set(records.map((r) => r.member_id)), [records]);
   const term = search.trim().toLowerCase();
   const available = useMemo(
     () => members
       .filter((m) => !checkedIds.has(m.id))
+      .filter((m) => !targetGroup || showAll || inTargetGroup(m.groups, targetGroup))
       .filter((m) => !term || nameOf(m).toLowerCase().includes(term) || (m.mobile_phone ?? '').includes(term))
       .slice(0, 50),
-    [members, checkedIds, term],
+    [members, checkedIds, term, targetGroup, showAll],
   );
 
   if (!session) return null;
@@ -107,6 +130,12 @@ export default function MemberCheckInModal({ session, userId, readOnly = false, 
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
+      {targetGroup && (
+        <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+          <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
+          Showing members in the matching group only. Tick to show all members.
+        </label>
+      )}
       {loading ? (
         <p className="py-10 text-center text-sm text-slate-500">Loading...</p>
       ) : (
