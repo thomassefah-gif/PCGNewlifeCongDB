@@ -48,6 +48,7 @@ export interface AttendanceMember {
   first_name: string | null;
   surname: string | null;
   mobile_phone: string | null;
+  groups?: string[];
 }
 
 export interface AttendanceRecord {
@@ -72,6 +73,7 @@ export interface AbsenteeMember {
   full_name: string;
   phone: string | null;
   group_name: string | null;
+  groups?: string[];
   last_attended_date: string | null;
   missed_weeks_count: number;
 }

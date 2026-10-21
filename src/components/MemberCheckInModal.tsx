@@ -3,11 +3,9 @@ import { Check, UserMinus } from 'lucide-react';
 import Button from './ui/Button';
 import Modal from './ui/Modal';
 import { useToast } from './ui/Toast';
-import { checkInMember, fetchSessionCheckIns, removeMemberCheckIn } from '../lib/queries/attendance';
+import { checkInMember, fetchCheckInMembers, fetchSessionCheckIns, removeMemberCheckIn } from '../lib/queries/attendance';
 import { getErrorMessage } from '../lib/errors';
-import { getAllMembers } from '../lib/queries/members';
-import type { AttendanceRecord, AttendanceSession } from '../types/attendance';
-import type { Member } from '../types/member';
+import type { AttendanceMember, AttendanceRecord, AttendanceSession } from '../types/attendance';
 
 interface MemberCheckInModalProps {
   session: AttendanceSession | null;
@@ -20,9 +18,20 @@ interface MemberCheckInModalProps {
 const nameOf = (m: { first_name: string | null; surname: string | null }) =>
   `${m.surname ?? ''} ${m.first_name ?? ''}`.trim() || 'Unnamed member';
 
+function GroupBadges({ groups }: { groups?: string[] }) {
+  if (!groups || groups.length === 0) return <span className="text-[10px] italic text-slate-400">No Group</span>;
+  return (
+    <span className="mt-0.5 flex flex-wrap gap-1">
+      {groups.map((g) => (
+        <span key={g} className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700">{g}</span>
+      ))}
+    </span>
+  );
+}
+
 export default function MemberCheckInModal({ session, userId, readOnly = false, onClose, onChanged }: MemberCheckInModalProps) {
   const { showToast } = useToast();
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<AttendanceMember[]>([]);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,8 +43,8 @@ export default function MemberCheckInModal({ session, userId, readOnly = false, 
     if (!sessionId) return;
     setLoading(true);
     try {
-      const [allMembers, checkIns] = await Promise.all([getAllMembers(), fetchSessionCheckIns(sessionId)]);
-      setMembers(allMembers.filter((m) => m.status === 'Active'));
+      const [activeMembers, checkIns] = await Promise.all([fetchCheckInMembers(), fetchSessionCheckIns(sessionId)]);
+      setMembers(activeMembers);
       setRecords(checkIns);
     } catch (err) {
       console.error('Failed to load check-ins', err);
@@ -108,7 +117,10 @@ export default function MemberCheckInModal({ session, userId, readOnly = false, 
               {records.length === 0 && <li className="px-3 py-6 text-center text-sm text-slate-500">No one checked in yet.</li>}
               {records.map((r) => (
                 <li key={r.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-                  <span className="min-w-0 truncate font-medium text-slate-900">{r.members ? nameOf(r.members) : 'Unknown member'}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-slate-900">{r.members ? nameOf(r.members) : 'Unknown member'}</span>
+                    <GroupBadges groups={r.members?.groups} />
+                  </span>
                   {!readOnly && (
                     <Button size="sm" variant="ghost" loading={busyId === r.id} icon={<UserMinus aria-hidden="true" size={14} />} onClick={() => void handleRemove(r)}>Remove</Button>
                   )}
@@ -122,7 +134,10 @@ export default function MemberCheckInModal({ session, userId, readOnly = false, 
               {available.length === 0 && <li className="px-3 py-6 text-center text-sm text-slate-500">No matching members.</li>}
               {available.map((m) => (
                 <li key={m.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-                  <span className="min-w-0 truncate">{nameOf(m)}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate">{nameOf(m)}</span>
+                    <GroupBadges groups={m.groups} />
+                  </span>
                   {!readOnly && (
                     <Button size="sm" variant="secondary" loading={busyId === m.id} icon={<Check aria-hidden="true" size={14} />} onClick={() => void handleCheckIn(m.id)}>Check In</Button>
                   )}

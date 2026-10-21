@@ -2,6 +2,7 @@ import { supabase } from '../supabaseClient';
 import { logAuditEvent } from './auditlogs';
 import {
   type AbsenteeMember,
+  type AttendanceMember,
   type AttendanceRecord,
   type AttendanceSession,
   type AttendanceSessionFilters,
@@ -10,6 +11,28 @@ import {
 } from '../../types/attendance';
 
 const SUNDAY = 'Sunday Main Service';
+const MEMBER_GROUPS_JOIN = 'member_groups(membership_status,groups(name))';
+
+interface MemberGroupRow {
+  membership_status?: string | null;
+  groups: { name: string | null } | null;
+}
+
+function extractGroups(memberGroups: MemberGroupRow[] | null | undefined): string[] {
+  return (memberGroups ?? [])
+    .filter((mg) => mg.membership_status !== 'Inactive')
+    .map((mg) => mg.groups?.name)
+    .filter((name): name is string => Boolean(name));
+}
+
+function withGroups(record: AttendanceRecord): AttendanceRecord {
+  const member = record.members as (AttendanceRecord['members'] & { member_groups?: MemberGroupRow[] }) | null;
+  if (!member) return record;
+  const { member_groups, ...rest } = member;
+  return { ...record, members: { ...rest, groups: extractGroups(member_groups) } };
+}
+
+const RECORD_COLUMNS = `id,session_id,member_id,check_in_time,check_in_by,created_at,members(id,first_name,surname,mobile_phone,${MEMBER_GROUPS_JOIN})`;
 
 function toError(error: { message?: string; details?: string }): Error {
   return new Error(error.message || error.details || String(error));
@@ -128,11 +151,29 @@ export async function deleteAttendanceSession(id: string, userId: string | null,
 export async function fetchSessionCheckIns(sessionId: string): Promise<AttendanceRecord[]> {
   const { data, error } = await supabase
     .from('attendance_records')
-    .select('id,session_id,member_id,check_in_time,check_in_by,created_at,members(id,first_name,surname,mobile_phone)')
+    .select(RECORD_COLUMNS)
     .eq('session_id', sessionId)
     .order('check_in_time', { ascending: false });
   if (error) throw toError(error);
-  return (data ?? []) as unknown as AttendanceRecord[];
+  return ((data ?? []) as unknown as AttendanceRecord[]).map(withGroups);
+}
+
+/** Active members with their group names, for the check-in list. */
+export async function fetchCheckInMembers(): Promise<AttendanceMember[]> {
+  const rows: AttendanceMember[] = [];
+  const pageSize = 1000;
+  for (let start = 0; ; start += pageSize) {
+    const { data, error } = await supabase
+      .from('members')
+      .select(`id,first_name,surname,mobile_phone,${MEMBER_GROUPS_JOIN}`)
+      .eq('status', 'Active')
+      .order('surname', { ascending: true })
+      .range(start, start + pageSize - 1);
+    if (error) throw toError(error);
+    const page = (data ?? []) as unknown as (AttendanceMember & { member_groups?: MemberGroupRow[] })[];
+    rows.push(...page.map(({ member_groups, ...m }) => ({ ...m, groups: extractGroups(member_groups) })));
+    if (page.length < pageSize) return rows;
+  }
 }
 
 export async function fetchAllCheckIns(): Promise<(AttendanceRecord & { session: Pick<AttendanceSession, 'session_date' | 'service_type'> | null })[]> {
@@ -154,10 +195,10 @@ export async function checkInMember(sessionId: string, memberId: string, userId:
   const { data, error } = await supabase
     .from('attendance_records')
     .insert({ session_id: sessionId, member_id: memberId, check_in_by: userId ?? null, check_in_time: new Date().toISOString() })
-    .select('id,session_id,member_id,check_in_time,check_in_by,created_at,members(id,first_name,surname,mobile_phone)')
+    .select(RECORD_COLUMNS)
     .single();
   if (error) throw toError(error);
-  return data as unknown as AttendanceRecord;
+  return withGroups(data as unknown as AttendanceRecord);
 }
 
 export async function removeMemberCheckIn(recordId: string): Promise<void> {
@@ -195,11 +236,11 @@ export async function fetchAbsenteeMembers(missedThreshold = 3): Promise<Absente
     if (page.length < pageSize) break;
   }
 
-  const members: { id: string; first_name: string | null; surname: string | null; mobile_phone: string | null }[] = [];
+  const members: (AttendanceMember & { member_groups?: MemberGroupRow[] })[] = [];
   for (let start = 0; ; start += pageSize) {
     const { data, error } = await supabase
       .from('members')
-      .select('id,first_name,surname,mobile_phone')
+      .select(`id,first_name,surname,mobile_phone,${MEMBER_GROUPS_JOIN}`)
       .eq('status', 'Active')
       .range(start, start + pageSize - 1);
     if (error) throw toError(error);
@@ -208,26 +249,18 @@ export async function fetchAbsenteeMembers(missedThreshold = 3): Promise<Absente
     if (page.length < pageSize) break;
   }
 
-  const groupByMember = new Map<string, string>();
-  const { data: groupData } = await supabase
-    .from('member_groups')
-    .select('member_id,groups(name)')
-    .eq('membership_status', 'Active')
-    .limit(10000);
-  for (const row of (groupData ?? []) as unknown as { member_id: string; groups: { name: string } | null }[]) {
-    if (row.groups?.name && !groupByMember.has(row.member_id)) groupByMember.set(row.member_id, row.groups.name);
-  }
-
   const result: AbsenteeMember[] = [];
   for (const m of members) {
     const last = lastSeen.get(m.id) ?? null;
     const missed = last ? dates.filter((d) => d > last).length : dates.length;
     if (missed < missedThreshold) continue;
+    const groups = extractGroups(m.member_groups);
     result.push({
       member_id: m.id,
       full_name: `${m.first_name ?? ''} ${m.surname ?? ''}`.trim() || 'Unnamed member',
       phone: m.mobile_phone,
-      group_name: groupByMember.get(m.id) ?? null,
+      group_name: groups[0] ?? null,
+      groups,
       last_attended_date: last,
       missed_weeks_count: missed,
     });

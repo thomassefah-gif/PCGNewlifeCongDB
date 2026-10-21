@@ -270,7 +270,7 @@ export default function AttendancePage() {
               <thead className="bg-accent text-left text-xs uppercase tracking-wide text-slate-600">
                 <tr>
                   <th className="px-4 py-3">Member</th>
-                  <th className="px-4 py-3">Group</th>
+                  <th className="px-4 py-3">Groups</th>
                   <th className="px-4 py-3">Phone</th>
                   <th className="px-4 py-3">Last attended</th>
                   <th className="px-4 py-3 text-right">Weeks missed</th>
@@ -281,7 +281,17 @@ export default function AttendancePage() {
                 {absentees.map((a) => (
                   <tr key={a.member_id} className="hover:bg-warning/5">
                     <td className="px-4 py-2.5 font-medium text-slate-900">{a.full_name}</td>
-                    <td className="px-4 py-2.5 text-slate-600">{a.group_name ?? '-'}</td>
+                    <td className="px-4 py-2.5">
+                      {a.groups && a.groups.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {a.groups.map((g) => (
+                            <span key={g} className="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold uppercase text-blue-700">{g}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs italic text-slate-400">No Group</span>
+                      )}
+                    </td>
                     <td className="px-4 py-2.5">{a.phone ?? '-'}</td>
                     <td className="whitespace-nowrap px-4 py-2.5">{displayDate(a.last_attended_date)}</td>
                     <td className="px-4 py-2.5 text-right"><Badge variant="distant">{a.missed_weeks_count}</Badge></td>
