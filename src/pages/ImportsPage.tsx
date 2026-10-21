@@ -64,7 +64,6 @@ function buildMember(row: CsvRow, mapping: Mapping): Record<string, unknown> {
     is_distant_member: false,
     date_joined_new_life: null,
     date_joined_new_life_is_estimated: false,
-    date_joined_current_is_estimated: false,
     date_joined_pcg_is_estimated: false,
   };
 }

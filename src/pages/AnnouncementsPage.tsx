@@ -11,6 +11,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import EmptyState from '../components/ui/EmptyState';
 import ExportButton from '../components/ui/ExportButton';
 import Modal from '../components/ui/Modal';
+import SpecialEventsTab from '../components/SpecialEventsTab';
 import { useToast } from '../components/ui/Toast';
 import { bulkCreateAnnouncements, bulkInsertAnnouncements, createAnnouncement, deleteAnnouncement, getAnnouncements, updateAnnouncement, type Announcement, type AnnouncementInput } from '../lib/queries/announcements';
 import type { ParsedPdfAnnouncement } from '../lib/pdfImport';
@@ -31,6 +32,21 @@ function validIsoDate(value: string): string | null {
 }
 
 export default function AnnouncementsPage() {
+  const [tab, setTab] = useState<'announcements' | 'events'>('announcements');
+  const tabs = [{ id: 'announcements', label: 'Announcements' }, { id: 'events', label: 'Special Programs & Events' }] as const;
+  return (
+    <div className="space-y-6">
+      <div role="tablist" className="flex gap-2 border-b border-stone-200">
+        {tabs.map((item) => (
+          <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => setTab(item.id)} className={`-mb-px rounded-t-xl px-4 py-2.5 text-sm font-semibold ${tab === item.id ? 'bg-[#1D4ED8] text-white' : 'text-[#1D4ED8] hover:bg-[#1D4ED8]/10'}`}>{item.label}</button>
+        ))}
+      </div>
+      {tab === 'announcements' ? <AnnouncementsTab /> : <SpecialEventsTab />}
+    </div>
+  );
+}
+
+function AnnouncementsTab() {
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);

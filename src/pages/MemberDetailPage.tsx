@@ -236,7 +236,7 @@ export default function MemberDetailPage() {
           ]} /></div>
           <div><h2 className="mb-2 font-semibold text-slate-900">Church Membership</h2><InfoGrid items={[
             ['Member Status', member.status], ['Date Joined New Life', formatDate(member.date_joined_new_life)], ['New Life Date Estimated', member.date_joined_new_life_is_estimated ? 'Yes' : 'No'],
-            ['Date Joined Current Congregation', formatDate(member.date_joined_current_congregation)], ['Date Joined PCG', formatDate(member.date_joined_pcg)],
+            ['Date Joined PCG', formatDate(member.date_joined_pcg)],
             ['Primary Generational Group', member.member_groups.find((item) => item.is_primary)?.groups?.name ?? null],
           ]} /></div>
         </div>}

@@ -39,10 +39,8 @@ export interface Member {
   status: MemberStatus;
   is_distant_member: boolean;
   date_joined_new_life: string | null;
-  date_joined_current_congregation: string | null;
   date_joined_pcg: string | null;
   date_joined_new_life_is_estimated: boolean;
-  date_joined_current_is_estimated: boolean;
   date_joined_pcg_is_estimated: boolean;
   created_at: string;
   updated_at?: string;
@@ -150,10 +148,8 @@ export interface MemberFormInput {
   status: MemberStatus;
   is_distant_member: boolean;
   date_joined_new_life: string;
-  date_joined_current_congregation: string;
   date_joined_pcg: string;
   date_joined_new_life_is_estimated: boolean;
-  date_joined_current_is_estimated: boolean;
   date_joined_pcg_is_estimated: boolean;
   primary_group_id: string;
   primary_group_name: string;

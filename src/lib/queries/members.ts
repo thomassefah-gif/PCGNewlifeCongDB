@@ -257,8 +257,8 @@ export async function getMemberById(id: string, includeAdminNotes = false): Prom
     'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality', 'residence_area',
     'residence_description', 'house_number', 'street_name', 'postal_address', 'residential_phone',
     'mobile_phone', 'emergency_contact_name', 'emergency_contact_phone', 'photo_url', 'email', 'status',
-    'is_distant_member', 'date_joined_new_life', 'date_joined_current_congregation', 'date_joined_pcg',
-    'date_joined_new_life_is_estimated', 'date_joined_current_is_estimated', 'date_joined_pcg_is_estimated', 'created_at',
+    'is_distant_member', 'date_joined_new_life', 'date_joined_pcg',
+    'date_joined_new_life_is_estimated', 'date_joined_pcg_is_estimated', 'created_at',
     ...(includeAdminNotes ? ['admin_notes'] : []),
   ].join(',');
 

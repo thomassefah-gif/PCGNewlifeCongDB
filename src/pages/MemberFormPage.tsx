@@ -46,10 +46,8 @@ const formSchema = z.object({
   status: z.enum(['Active', 'Inactive']),
   is_distant_member: z.boolean(),
   date_joined_new_life: z.string(),
-  date_joined_current_congregation: z.string(),
   date_joined_pcg: z.string(),
   date_joined_new_life_is_estimated: z.boolean(),
-  date_joined_current_is_estimated: z.boolean(),
   date_joined_pcg_is_estimated: z.boolean(),
   primary_group_id: z.string(),
   primary_group_name: z.string(),
@@ -81,8 +79,8 @@ const defaults: MemberFormInput = {
   profession: '', occupation: '', special_interests: '', home_town: '', place_of_birth: '', nationality: '',
   residence_area: '', residence_description: '', house_number: '', street_name: '', postal_address: '',
   residential_phone: '', mobile_phone: '', emergency_contact_name: '', emergency_contact_phone: '', photo_url: '', email: '', status: 'Active', is_distant_member: false,
-  date_joined_new_life: '', date_joined_current_congregation: '', date_joined_pcg: '',
-  date_joined_new_life_is_estimated: false, date_joined_current_is_estimated: false, date_joined_pcg_is_estimated: false,
+  date_joined_new_life: '', date_joined_pcg: '',
+  date_joined_new_life_is_estimated: false, date_joined_pcg_is_estimated: false,
   primary_group_id: '', primary_group_name: '', family_group_id: '', interest_group_ids: [],
   parent_member_id: '', parent_relationship_type: 'parent', spouse_full_name: '', spouse_postal_address: '',
   spouse_contact_number: '', baptism_date: '', baptised_by: '', confirmation_date: '', local_congregation: '',
@@ -117,10 +115,8 @@ function profileToForm(member: MemberProfile): MemberFormInput {
     photo_url: text(member.photo_url),
     status: member.status, is_distant_member: member.is_distant_member,
     date_joined_new_life: text(member.date_joined_new_life),
-    date_joined_current_congregation: text(member.date_joined_current_congregation),
     date_joined_pcg: text(member.date_joined_pcg),
     date_joined_new_life_is_estimated: member.date_joined_new_life_is_estimated,
-    date_joined_current_is_estimated: member.date_joined_current_is_estimated,
     date_joined_pcg_is_estimated: member.date_joined_pcg_is_estimated,
     primary_group_id: primaryMembership?.group_id ?? '',
     primary_group_name: primaryMembership?.groups?.name ?? '',
@@ -476,8 +472,6 @@ export default function MemberFormPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Date Joined New Life Congregation"><input type="date" className={inputClass} {...register('date_joined_new_life')} /></Field>
           <label className="flex min-h-10 items-center gap-2.5 self-end pb-2 text-sm text-slate-600"><input type="checkbox" className="h-4 w-4 rounded border-stone-300 text-primary focus:ring-primary" {...register('date_joined_new_life_is_estimated')} /> Date is estimated</label>
-          <Field label="Date Joined Current Congregation"><input type="date" className={inputClass} {...register('date_joined_current_congregation')} /></Field>
-          <label className="flex min-h-10 items-center gap-2.5 self-end pb-2 text-sm text-slate-600"><input type="checkbox" className="h-4 w-4 rounded border-stone-300 text-primary focus:ring-primary" {...register('date_joined_current_is_estimated')} /> Date is estimated</label>
           <Field label="Date Joined PCG"><input type="date" className={inputClass} {...register('date_joined_pcg')} /></Field>
           <label className="flex min-h-10 items-center gap-2.5 self-end pb-2 text-sm text-slate-600"><input type="checkbox" className="h-4 w-4 rounded border-stone-300 text-primary focus:ring-primary" {...register('date_joined_pcg_is_estimated')} /> Date is estimated</label>
           <Field label="Church Family Group"><select className={selectClass} {...register('family_group_id')}><option value="">No family group</option>{familyGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></Field>
