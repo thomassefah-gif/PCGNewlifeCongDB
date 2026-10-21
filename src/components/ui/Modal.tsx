@@ -10,6 +10,7 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   maxWidth?: ModalMaxWidth;
+  blueHeader?: boolean;
 }
 
 const widths: Record<ModalMaxWidth, string> = {
@@ -20,7 +21,7 @@ const widths: Record<ModalMaxWidth, string> = {
   '2xl': 'max-w-2xl',
 };
 
-export default function Modal({ isOpen, onClose, title, children, maxWidth = 'md' }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, maxWidth = 'md', blueHeader = false }: ModalProps) {
   useEffect(() => {
     if (!isOpen) return;
 
@@ -52,13 +53,13 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'md
         aria-labelledby="modal-title"
         className={clsx('my-auto w-full overflow-hidden rounded-2xl bg-white shadow-2xl', widths[maxWidth])}
       >
-        <header className="flex items-center justify-between gap-4 border-b border-stone-200 bg-accent px-5 py-4 sm:px-6">
-          <h2 id="modal-title" className="text-base font-semibold text-slate-900">{title}</h2>
+        <header className={clsx('flex items-center justify-between gap-4 border-b px-5 py-4 sm:px-6', blueHeader ? 'border-blue-900 bg-blue-900 text-white' : 'border-stone-200 bg-accent')}>
+          <h2 id="modal-title" className={clsx('text-base font-semibold', blueHeader ? 'text-white' : 'text-slate-900')}>{title}</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-900"
+            className={clsx('flex h-8 w-8 items-center justify-center rounded-lg', blueHeader ? 'text-blue-100 hover:bg-white/15 hover:text-white' : 'text-slate-500 hover:bg-white hover:text-slate-900')}
           >
             <X aria-hidden="true" size={18} />
           </button>
