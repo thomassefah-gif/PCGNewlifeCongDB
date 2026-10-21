@@ -4,6 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { routeItems } from '../../routes/routeItems';
 import { useAuth } from '../../features/auth/AuthContext';
+import { getErrorMessage } from '../../lib/errors';
 import { useToast } from '../ui/Toast';
 
 interface SidebarProps {
@@ -28,7 +29,7 @@ export default function Sidebar({ mobileOpen, onNavigate }: SidebarProps) {
       navigate('/login', { replace: true });
     } catch (error) {
       console.error(error);
-      showToast(error instanceof Error ? error.message : String(error), 'error');
+      showToast(getErrorMessage(error), 'error');
       navigate('/login', { replace: true });
     } finally {
       setSigningOut(false);
@@ -38,12 +39,12 @@ export default function Sidebar({ mobileOpen, onNavigate }: SidebarProps) {
   return (
     <aside
       className={clsx(
-        'fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col bg-primary px-4 pb-5 pt-6 text-white shadow-xl transition-transform duration-300 lg:translate-x-0',
+        'fixed inset-y-0 left-0 z-50 flex h-screen w-[280px] flex-col bg-primary px-4 pb-5 pt-6 text-white shadow-xl transition-transform duration-300 lg:translate-x-0',
         mobileOpen ? 'translate-x-0' : '-translate-x-full',
       )}
       aria-label="Main navigation"
     >
-      <div className="flex items-center gap-3 px-2 pb-8">
+      <div className="flex shrink-0 items-center gap-3 px-2 pb-8">
         {!logoUnavailable ? (
           <img
             src="/LogoImg/presbylogo.png"
@@ -63,8 +64,8 @@ export default function Sidebar({ mobileOpen, onNavigate }: SidebarProps) {
         </div>
       </div>
 
-      <p className="px-3 pb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Workspace</p>
-      <nav className="flex-1 space-y-1" aria-label="Workspace pages">
+      <p className="shrink-0 px-3 pb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Workspace</p>
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-color:rgba(255,255,255,0.35)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/30 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5" aria-label="Workspace pages">
         {routeItems.filter((item) => !item.adminOnly || role === 'admin').map(({ path, label, icon: Icon }) => (
           <NavLink
             key={path}
@@ -82,11 +83,11 @@ export default function Sidebar({ mobileOpen, onNavigate }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="rounded-xl border border-white/15 bg-white/10 p-4">
+      <div className="mt-4 shrink-0 rounded-xl border border-white/15 bg-white/10 p-4">
         <p className="text-xs font-semibold">Welcome</p>
         <p className="mt-1 text-xs leading-5 text-white/70">Your congregation workspace is ready to set up.</p>
       </div>
-      <div className="mt-4 border-t border-white/15 pt-3">
+      <div className="mt-4 shrink-0 border-t border-white/15 pt-3">
         <button
           type="button"
           onClick={() => void handleSignOut()}
