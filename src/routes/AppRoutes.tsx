@@ -11,6 +11,7 @@ import StaffPage from '../pages/StaffPage';
 import UsersPage from '../pages/UsersPage';
 import ImportsPage from '../pages/ImportsPage';
 import AnnouncementsPage from '../pages/AnnouncementsPage';
+import AttendancePage from '../pages/AttendancePage';
 import ContributionsPage from '../pages/ContributionsPage';
 import FieldBuilderPage from '../pages/FieldBuilderPage';
 import { PlaceholderPage } from '../pages/PlaceholderPage';
@@ -45,6 +46,8 @@ export default function AppRoutes() {
                   ? <ProgramsPage />
                   : item.path === '/staff'
                     ? <StaffPage />
+                    : item.path === '/attendance'
+                      ? <AttendancePage />
                     : item.path === '/contributions'
                       ? <ContributionsPage />
                     : item.path === '/announcements'

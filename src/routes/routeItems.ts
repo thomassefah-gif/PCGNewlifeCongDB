@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   BarChart3,
+  ClipboardCheck,
   ContactRound,
   FileUp,
   FolderKanban,
@@ -26,6 +27,7 @@ export const routeItems: RouteItem[] = [
   { path: '/staff', label: 'Staff Directory', description: 'Staff directory tools will appear here.', icon: UsersRound },
   { path: '/announcements', label: 'Announcements', description: 'Church news and important notices.', icon: Megaphone },
   { path: '/contributions', label: 'Contributions', description: 'Dues, tithes and offerings.', icon: Landmark },
+  { path: '/attendance', label: 'Attendance', description: 'Service check-in and attendance tracking.', icon: ClipboardCheck },
   { path: '/field-builder', label: 'Field Builder', description: 'Custom contact fields will be managed here.', icon: Settings2, adminOnly: true },
   { path: '/users', label: 'User Management', description: 'System user administration will be available here.', icon: UserRoundCog, adminOnly: true },
   { path: '/imports', label: 'CSV Imports', description: 'CSV import and mapping tools will be available here.', icon: FileUp, adminOnly: true },
