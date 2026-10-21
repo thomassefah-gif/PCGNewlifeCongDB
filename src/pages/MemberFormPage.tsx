@@ -15,6 +15,7 @@ const requiredChoice = <T extends string>(values: readonly T[], message: string)
   z.union([...(values.map((value) => z.literal(value))), z.literal('')]).refine((value) => value !== '', message);
 
 const formSchema = z.object({
+  member_code: z.string(),
   title: z.string(),
   title_other: z.string(),
   surname: z.string().refine((value) => value.trim().length > 0, 'Surname is required.'),
@@ -74,6 +75,7 @@ const formSchema = z.object({
 type ParentOption = Pick<Member, 'id' | 'title' | 'first_name' | 'surname' | 'email' | 'mobile_phone'>;
 
 const defaults: MemberFormInput = {
+  member_code: '',
   title: '', title_other: '', surname: '', first_name: '', maiden_name: '', sex: '', date_of_birth: '',
   date_of_birth_is_estimated: false, communicant_status: '', marital_status: '', marriage_type: '',
   profession: '', occupation: '', special_interests: '', home_town: '', place_of_birth: '', nationality: '',
@@ -101,7 +103,7 @@ function profileToForm(member: MemberProfile): MemberFormInput {
 
   return {
     ...defaults,
-    title: text(member.title), title_other: text(member.title_other), surname: text(member.surname),
+    member_code: text(member.member_code), title_other: text(member.title_other), surname: text(member.surname),
     first_name: text(member.first_name), maiden_name: text(member.maiden_name), sex: member.sex ?? '',
     date_of_birth: text(member.date_of_birth), date_of_birth_is_estimated: member.date_of_birth_is_estimated,
     communicant_status: member.communicant_status ?? '', marital_status: member.marital_status ?? '',
@@ -373,6 +375,7 @@ export default function MemberFormPage() {
       <section className="space-y-5 rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm sm:p-6">
         <div><h2 className="font-semibold text-slate-900">Personal Information</h2><p className="mt-1 text-sm text-slate-500">Basic identity and church membership details.</p></div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label="Membership ID"><input className={inputClass} {...register('member_code')} /></Field>
           <Field label="Title"><input className={inputClass} placeholder="e.g. Mr, Mrs, Rev" {...register('title')} /></Field>
           {watch('title') === 'Other' && <Field label="Other title"><input className={inputClass} {...register('title_other')} /></Field>}
           <Field label="First Name" required error={errors.first_name?.message}><input className={inputClass} autoComplete="given-name" {...register('first_name')} /></Field>

@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient';
 import type { Group, Member, MemberFilters, MemberFormInput, MemberProfile, MemberRelationship } from '../../types/member';
 
-const memberColumns = 'id,title,surname,first_name,sex,date_of_birth,mobile_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at';
+const memberColumns = 'id,member_code,title,surname,first_name,sex,date_of_birth,mobile_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at';
 
 export async function getMembers(filters: MemberFilters = {}): Promise<{ members: Member[]; totalCount: number }> {
   const page = Math.max(1, filters.page ?? 1);
@@ -73,7 +73,7 @@ export async function deleteMember(id: string): Promise<void> {
 }
 
 const memberPayloadColumns = [
-  'title', 'title_other', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
+  'title', 'title_other', 'member_code', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
   'date_of_birth_is_estimated', 'communicant_status', 'marital_status', 'marriage_type',
   'profession', 'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality',
   'residence_area', 'residence_description', 'house_number', 'street_name', 'postal_address',
@@ -90,6 +90,7 @@ function toMemberPayload(input: MemberInputWithAdminNotes) {
     title: nullableText(input.title),
     title_other: nullableText(input.title_other),
     surname: input.surname.trim(),
+    member_code: input.member_code?.trim() || null,
     first_name: input.first_name.trim(),
     maiden_name: nullableText(input.maiden_name),
     sex: input.sex,
@@ -252,7 +253,7 @@ async function syncSpouseContact(memberId: string, input: MemberFormInput): Prom
 
 export async function getMemberById(id: string, includeAdminNotes = false): Promise<MemberProfile> {
   const memberColumns = [
-    'id', 'title', 'title_other', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
+    'id', 'member_code', 'title', 'title_other', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
     'date_of_birth_is_estimated', 'communicant_status', 'marital_status', 'marriage_type', 'profession',
     'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality', 'residence_area',
     'residence_description', 'house_number', 'street_name', 'postal_address', 'residential_phone',
