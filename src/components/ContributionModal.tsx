@@ -62,9 +62,14 @@ export default function ContributionModal({ isOpen, onClose, onSave, contributio
     if (!Number.isFinite(value) || value <= 0) return setError('Amount must be greater than zero.');
     if (!paymentDate) return setError('Payment date is required.');
     setError('');
+    const selected = members.find((m) => m.id === memberId);
+    const contributorName = isGuest
+      ? guestName.trim()
+      : `${selected?.first_name ?? ''} ${selected?.surname ?? ''}`.trim() || null;
     await onSave({
       member_id: isGuest ? null : memberId,
       guest_name: isGuest ? guestName.trim() : null,
+      contributor_name: contributorName,
       category,
       amount: Math.round(value * 100) / 100,
       payment_method: method,

@@ -17,6 +17,22 @@ function toError(error: { message?: string; details?: string }): Error {
   return new Error(error.message || error.details || String(error));
 }
 
+// Supabase rejects/ignores undefined; coerce every field to a value or null.
+function buildPayload(input: ContributionFormData) {
+  const name = input.contributor_name || input.guest_name || null;
+  return {
+    member_id: input.member_id ?? null,
+    contributor_name: name,
+    guest_name: name,
+    category: input.category,
+    amount: input.amount,
+    payment_method: input.payment_method,
+    payment_date: input.payment_date,
+    reference_number: input.reference_number ?? null,
+    notes: input.notes ?? null,
+  };
+}
+
 function normalize(row: unknown): Contribution {
   const r = row as Contribution;
   return { ...r, amount: Number(r.amount), members: r.members ?? null, profiles: r.profiles ?? null };
@@ -78,7 +94,7 @@ export async function createContribution(
   userEmail: string | null,
   userName: string | null,
 ): Promise<Contribution> {
-  const payload = { ...input, recorded_by: userId };
+  const payload = { ...buildPayload(input), recorded_by: userId ?? null };
   const { data, error } = await supabase
     .from('contributions')
     .insert(payload)
@@ -107,7 +123,7 @@ export async function updateContribution(
   userEmail: string | null,
   userName: string | null,
 ): Promise<void> {
-  const { error } = await supabase.from('contributions').update(input).eq('id', id);
+  const { error } = await supabase.from('contributions').update(buildPayload(input)).eq('id', id);
   if (error) throw toError(error);
   await logAuditEvent({
     action: 'update',

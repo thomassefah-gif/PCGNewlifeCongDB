@@ -38,6 +38,7 @@ export interface Contribution {
 export interface ContributionFormData {
   member_id: string | null;
   guest_name: string | null;
+  contributor_name?: string | null;
   category: ContributionCategory;
   amount: number;
   payment_method: PaymentMethod;
