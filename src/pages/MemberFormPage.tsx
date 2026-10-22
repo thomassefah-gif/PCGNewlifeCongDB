@@ -455,8 +455,8 @@ export default function MemberFormPage() {
               <Field label="Spouse Name"><input className={inputClass} {...register('spouse_name')} /></Field>
               <Field label="Spouse Contact Phone"><input className={inputClass} inputMode="tel" {...register('spouse_phone')} /></Field>
             </>}
-            <Field label="Children Names"><textarea rows={3} className={inputClass} placeholder="One name per line" {...register('children_names')} /></Field>
-            <Field label="Children Contacts"><textarea rows={3} className={inputClass} placeholder="One contact per line" {...register('children_contacts')} /></Field>
+            <Field label="Children Names"><textarea rows={3} className={inputClass} placeholder="e.g. Samuel Doe, Kwame Doe" {...register('children_names')} /></Field>
+            <Field label="Children Contacts"><textarea rows={3} className={inputClass} placeholder="e.g. 0244123456, 0551234567" {...register('children_contacts')} /></Field>
           </div>
         </section>
       )}
