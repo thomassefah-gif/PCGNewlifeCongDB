@@ -3,7 +3,7 @@ export type Sex = 'Male' | 'Female';
 export type GroupType = 'generational' | 'interest' | 'family' | 'custom';
 export type CommunicantStatus = 'Communicant' | 'Non-Communicant';
 export type MaritalStatus = 'Married' | 'Single' | 'Divorced' | 'Widow' | 'Widower' | 'Co-habiting';
-export type MarriageType = 'Ordinance' | 'Customary';
+export type MarriageType = 'Customary' | 'Church Ordinance' | 'Civil Registry';
 
 export interface Member {
   id: string;
@@ -17,13 +17,14 @@ export interface Member {
   title_other: string | null;
   surname: string | null;
   first_name: string | null;
-  maiden_name: string | null;
+  maiden_name?: string | null;
   sex: Sex | null;
   date_of_birth: string | null;
   date_of_birth_is_estimated: boolean;
   communicant_status: CommunicantStatus | null;
   marital_status: MaritalStatus | null;
-  marriage_type: MarriageType | null;
+  marriage_type?: string | null;
+  spouse_postal_address?: string | null;
   profession: string | null;
   occupation: string | null;
   special_interests: string | null;
@@ -123,10 +124,11 @@ export interface MemberProfile extends Member {
 
 /** Form values, including group selectors and details that map to related tables. */
 export interface MemberFormInput {
-  spouse_name?: string | null;
-  spouse_phone?: string | null;
-  children_names?: string | null;
-  children_contacts?: string | null;
+  spouse_name: string;
+  spouse_phone: string;
+  spouse_postal_address: string;
+  children_names: string;
+  children_contacts: string;
   member_code: string;
   title: string;
   title_other: string;
@@ -138,7 +140,7 @@ export interface MemberFormInput {
   date_of_birth_is_estimated: boolean;
   communicant_status: CommunicantStatus | '';
   marital_status: MaritalStatus | '';
-  marriage_type: MarriageType | '';
+  marriage_type: string;
   profession: string;
   occupation: string;
   special_interests: string;
@@ -168,9 +170,6 @@ export interface MemberFormInput {
   interest_group_ids: string[];
   parent_member_id: string;
   parent_relationship_type: 'parent' | 'guardian';
-  spouse_full_name: string;
-  spouse_postal_address: string;
-  spouse_contact_number: string;
   baptism_date: string;
   baptised_by: string;
   confirmation_date: string;

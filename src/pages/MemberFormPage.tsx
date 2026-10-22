@@ -15,10 +15,11 @@ const requiredChoice = <T extends string>(values: readonly T[], message: string)
   z.union([...(values.map((value) => z.literal(value))), z.literal('')]).refine((value) => value !== '', message);
 
 const formSchema = z.object({
-  spouse_name: z.string().nullish(),
-  spouse_phone: z.string().nullish(),
-  children_names: z.string().nullish(),
-  children_contacts: z.string().nullish(),
+  spouse_name: z.string(),
+  spouse_phone: z.string(),
+  spouse_postal_address: z.string(),
+  children_names: z.string(),
+  children_contacts: z.string(),
   member_code: z.string(),
   title: z.string(),
   title_other: z.string(),
@@ -30,7 +31,7 @@ const formSchema = z.object({
   date_of_birth_is_estimated: z.boolean(),
   communicant_status: z.union([z.literal('Communicant'), z.literal('Non-Communicant'), z.literal('')]),
   marital_status: z.union([z.literal('Married'), z.literal('Single'), z.literal('Divorced'), z.literal('Widow'), z.literal('Widower'), z.literal('Co-habiting'), z.literal('')]),
-  marriage_type: z.union([z.literal('Ordinance'), z.literal('Customary'), z.literal('')]),
+  marriage_type: z.string(),
   profession: z.string(),
   occupation: z.string(),
   special_interests: z.string(),
@@ -60,9 +61,6 @@ const formSchema = z.object({
   interest_group_ids: z.array(z.string()),
   parent_member_id: z.string(),
   parent_relationship_type: z.union([z.literal('parent'), z.literal('guardian')]),
-  spouse_full_name: z.string(),
-  spouse_postal_address: z.string(),
-  spouse_contact_number: z.string(),
   baptism_date: z.string(),
   baptised_by: z.string(),
   confirmation_date: z.string(),
@@ -70,16 +68,12 @@ const formSchema = z.object({
   district: z.string(),
   presbytery: z.string(),
   memory_verse: z.string(),
-}).superRefine((value, context) => {
-  if (value.marital_status === 'Married' && (value.spouse_postal_address.trim() || value.spouse_contact_number.trim()) && !value.spouse_full_name.trim()) {
-    context.addIssue({ code: 'custom', path: ['spouse_full_name'], message: 'Enter the spouse name when adding spouse contact details.' });
-  }
 });
 
 type ParentOption = Pick<Member, 'id' | 'title' | 'first_name' | 'surname' | 'email' | 'mobile_phone'>;
 
 const defaults: MemberFormInput = {
-  spouse_name: '', spouse_phone: '', children_names: '', children_contacts: '',
+  spouse_name: '', spouse_phone: '', spouse_postal_address: '', children_names: '', children_contacts: '',
   member_code: '',
   title: '', title_other: '', surname: '', first_name: '', maiden_name: '', sex: '', date_of_birth: '',
   date_of_birth_is_estimated: false, communicant_status: '', marital_status: '', marriage_type: '',
@@ -89,8 +83,7 @@ const defaults: MemberFormInput = {
   date_joined_new_life: '', date_joined_pcg: '',
   date_joined_new_life_is_estimated: false, date_joined_pcg_is_estimated: false,
   primary_group_id: '', primary_group_name: '', family_group_id: '', interest_group_ids: [],
-  parent_member_id: '', parent_relationship_type: 'parent', spouse_full_name: '', spouse_postal_address: '',
-  spouse_contact_number: '', baptism_date: '', baptised_by: '', confirmation_date: '', local_congregation: '',
+  parent_member_id: '', parent_relationship_type: 'parent', baptism_date: '', baptised_by: '', confirmation_date: '', local_congregation: '',
   district: '', presbytery: '', memory_verse: '',
 };
 
@@ -108,12 +101,16 @@ function profileToForm(member: MemberProfile): MemberFormInput {
 
   return {
     ...defaults,
-    spouse_name: text(member.spouse_name), spouse_phone: text(member.spouse_phone),
-    children_names: text(member.children_names), children_contacts: text(member.children_contacts),    member_code: text(member.member_code), title_other: text(member.title_other), surname: text(member.surname),
+    spouse_name: text(member.spouse_name ?? spouse?.full_name),
+    spouse_phone: text(member.spouse_phone ?? spouse?.contact_number),
+    spouse_postal_address: text(member.spouse_postal_address ?? spouse?.postal_address),
+    children_names: text(member.children_names), children_contacts: text(member.children_contacts),
+    member_code: text(member.member_code), title_other: text(member.title_other), surname: text(member.surname),
     first_name: text(member.first_name), maiden_name: text(member.maiden_name), sex: member.sex ?? '',
     date_of_birth: text(member.date_of_birth), date_of_birth_is_estimated: member.date_of_birth_is_estimated,
     communicant_status: member.communicant_status ?? '', marital_status: member.marital_status ?? '',
-    marriage_type: member.marriage_type ?? '', profession: text(member.profession), occupation: text(member.occupation),
+    marriage_type: member.marriage_type === 'Ordinance' ? 'Church Ordinance' : member.marriage_type ?? '',
+    profession: text(member.profession), occupation: text(member.occupation),
     special_interests: text(member.special_interests), home_town: text(member.home_town),
     place_of_birth: text(member.place_of_birth), nationality: text(member.nationality),
     residence_area: text(member.residence_area), residence_description: text(member.residence_description),
@@ -132,8 +129,6 @@ function profileToForm(member: MemberProfile): MemberFormInput {
     interest_group_ids: activeGroups.filter((membership) => membership.groups?.group_type === 'interest').map((membership) => membership.group_id),
     parent_member_id: parent?.related_member_id ?? '',
     parent_relationship_type: parent?.relationship_type === 'guardian' ? 'guardian' : 'parent',
-    spouse_full_name: text(spouse?.full_name), spouse_postal_address: text(spouse?.postal_address),
-    spouse_contact_number: text(spouse?.contact_number),
     baptism_date: text(sacraments?.baptism_date), baptised_by: text(sacraments?.baptised_by),
     confirmation_date: text(sacraments?.confirmation_date), local_congregation: text(sacraments?.local_congregation),
     district: text(sacraments?.district), presbytery: text(sacraments?.presbytery), memory_verse: text(sacraments?.memory_verse),
@@ -250,9 +245,11 @@ export default function MemberFormPage() {
       setValue('marriage_type', '');
       setValue('profession', '');
       setValue('occupation', '');
-      setValue('spouse_full_name', '');
+      setValue('spouse_name', '');
+      setValue('spouse_phone', '');
       setValue('spouse_postal_address', '');
-      setValue('spouse_contact_number', '');
+      setValue('children_names', '');
+      setValue('children_contacts', '');
     }
   };
 
@@ -323,8 +320,8 @@ export default function MemberFormPage() {
     return <div className="animate-pulse rounded-2xl border border-stone-200 bg-white px-6 py-16 text-center text-sm font-medium text-slate-500">Loading member details...</div>;
   }
 
-  const primaryGroups = groups.filter((group) => group.group_type === 'generational');
-  const familyGroups = groups.filter((group) => group.group_type === 'family');
+  const primaryGroups = groups.filter((group) => group.group_type === 'generational' && group.name.trim().toLowerCase() !== 'no group membership');
+  const familyGroups = groups.filter((group) => group.group_type === 'family' && !['no family group', 'no group membership'].includes(group.name.trim().toLowerCase()));
   const interestGroups = groups.filter((group) => group.group_type === 'interest');
   const emailError = errors.email?.message;
 
@@ -386,7 +383,6 @@ export default function MemberFormPage() {
           {watch('title') === 'Other' && <Field label="Other title"><input className={inputClass} {...register('title_other')} /></Field>}
           <Field label="First Name" required error={errors.first_name?.message}><input className={inputClass} autoComplete="given-name" {...register('first_name')} /></Field>
           <Field label="Surname" required error={errors.surname?.message}><input className={inputClass} autoComplete="family-name" {...register('surname')} /></Field>
-          {sex === 'Female' && maritalStatus === 'Married' && !isYouth && <Field label="Maiden Name"><input className={inputClass} {...register('maiden_name')} /></Field>}
           <Field label="Sex" required error={errors.sex?.message}>
             <select className={selectClass} {...register('sex')}><option value="">Select sex</option><option value="Male">Male</option><option value="Female">Female</option></select>
           </Field>
@@ -439,24 +435,23 @@ export default function MemberFormPage() {
               <select className={selectClass} {...register('marital_status')} onChange={(event) => {
                 setValue('marital_status', event.target.value as MemberFormInput['marital_status'], { shouldDirty: true });
                 if (event.target.value !== 'Married') {
-                  setValue('marriage_type', ''); setValue('spouse_full_name', ''); setValue('spouse_postal_address', ''); setValue('spouse_contact_number', '');
+                  setValue('marriage_type', ''); setValue('spouse_name', ''); setValue('spouse_phone', ''); setValue('spouse_postal_address', '');
                 }
               }}>
                 <option value="">Select marital status</option><option>Married</option><option>Single</option><option>Divorced</option><option>Widow</option><option>Widower</option><option>Co-habiting</option>
               </select>
             </Field>
-            {isMarried && <Field label="Marriage Type"><select className={selectClass} {...register('marriage_type')}><option value="">Select type</option><option>Ordinance</option><option>Customary</option></select></Field>}
+            {sex === 'Female' && isMarried && <Field label="Maiden Name"><input className={inputClass} {...register('maiden_name')} /></Field>}
+            {isMarried && <Field label="Marriage Type"><select className={selectClass} {...register('marriage_type')}><option value="">Select type</option><option>Customary</option><option>Church Ordinance</option><option>Civil Registry</option></select></Field>}
             <Field label="Profession"><input className={inputClass} {...register('profession')} /></Field>
             <Field label="Occupation"><input className={inputClass} {...register('occupation')} /></Field>
             {isMarried && <>
-              <Field label="Spouse Full Name" error={errors.spouse_full_name?.message}><input className={inputClass} {...register('spouse_full_name')} /></Field>
-              <Field label="Spouse Contact Number"><input className={inputClass} inputMode="tel" {...register('spouse_contact_number')} /></Field>
-              <Field label="Spouse Postal Address"><input className={inputClass} {...register('spouse_postal_address')} /></Field>
               <Field label="Spouse Name"><input className={inputClass} {...register('spouse_name')} /></Field>
               <Field label="Spouse Contact Phone"><input className={inputClass} inputMode="tel" {...register('spouse_phone')} /></Field>
+              <Field label="Spouse Postal Address"><input className={inputClass} {...register('spouse_postal_address')} /></Field>
             </>}
-            <Field label="Children Names"><textarea rows={3} className={inputClass} placeholder="e.g. Samuel Doe, Kwame Doe" {...register('children_names')} /></Field>
-            <Field label="Children Contacts"><textarea rows={3} className={inputClass} placeholder="e.g. 0244123456, 0551234567" {...register('children_contacts')} /></Field>
+            <Field label="Children Names"><textarea rows={3} className={`${inputClass} h-auto py-2.5`} placeholder="e.g. Samuel Doe, Kwame Doe" {...register('children_names')} /></Field>
+            <Field label="Children Contacts"><textarea rows={3} className={`${inputClass} h-auto py-2.5`} placeholder="e.g. 0244123456, 0551234567" {...register('children_contacts')} /></Field>
           </div>
         </section>
       )}

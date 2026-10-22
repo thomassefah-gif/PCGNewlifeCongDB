@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient';
 import type { Group, Member, MemberFilters, MemberFormInput, MemberProfile, MemberRelationship } from '../../types/member';
 
-const memberColumns = 'id,member_code,title,surname,first_name,sex,date_of_birth,mobile_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at';
+const memberColumns = 'id,member_code,title,surname,first_name,maiden_name,marriage_type,spouse_name,spouse_phone,spouse_postal_address,children_names,children_contacts,sex,date_of_birth,mobile_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at';
 
 export async function getMembers(filters: MemberFilters = {}): Promise<{ members: Member[]; totalCount: number }> {
   const page = Math.max(1, filters.page ?? 1);
@@ -86,7 +86,7 @@ export async function deleteMember(id: string): Promise<void> {
 }
 
 const memberPayloadColumns = [
-  'title', 'title_other', 'member_code', 'spouse_name', 'spouse_phone', 'children_names', 'children_contacts', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
+  'title', 'title_other', 'member_code', 'spouse_name', 'spouse_phone', 'spouse_postal_address', 'children_names', 'children_contacts', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
   'date_of_birth_is_estimated', 'communicant_status', 'marital_status', 'marriage_type',
   'profession', 'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality',
   'residence_area', 'residence_description', 'house_number', 'street_name', 'postal_address',
@@ -115,6 +115,7 @@ function toMemberPayload(input: MemberInputWithAdminNotes) {
     profession: isYouth ? null : nullableText(input.profession),
     spouse_name: isYouth || input.marital_status !== 'Married' ? null : input.spouse_name?.trim() || null,
     spouse_phone: isYouth || input.marital_status !== 'Married' ? null : input.spouse_phone?.trim() || null,
+    spouse_postal_address: isYouth || input.marital_status !== 'Married' ? null : input.spouse_postal_address?.trim() || null,
     children_names: isYouth ? null : input.children_names?.trim() || null,
     children_contacts: isYouth ? null : input.children_contacts?.trim() || null,
     occupation: isYouth ? null : nullableText(input.occupation),
@@ -251,11 +252,10 @@ async function syncSpouseContact(memberId: string, input: MemberFormInput): Prom
   if (deleteError) throw deleteError;
   if (input.marital_status !== 'Married' || ['Children Service', 'Junior Youth (JY)'].includes(input.primary_group_name)) return;
 
-  const fullName = input.spouse_full_name.trim();
+  const fullName = input.spouse_name.trim();
   const postalAddress = input.spouse_postal_address.trim();
-  const contactNumber = input.spouse_contact_number.trim();
-  if (!fullName && !postalAddress && !contactNumber) return;
-  if (!fullName) throw new Error('Enter the spouse name to save spouse contact details.');
+  const contactNumber = input.spouse_phone.trim();
+  if (!fullName) return;
   const { error } = await supabase.from('member_family_contacts').insert({
     member_id: memberId,
     relationship_type: 'spouse',
@@ -270,7 +270,7 @@ async function syncSpouseContact(memberId: string, input: MemberFormInput): Prom
 
 export async function getMemberById(id: string, includeAdminNotes = false): Promise<MemberProfile> {
   const memberColumns = [
-    'id', 'member_code', 'spouse_name', 'spouse_phone', 'children_names', 'children_contacts', 'title', 'title_other', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
+    'id', 'member_code', 'spouse_name', 'spouse_phone', 'spouse_postal_address', 'children_names', 'children_contacts', 'title', 'title_other', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
     'date_of_birth_is_estimated', 'communicant_status', 'marital_status', 'marriage_type', 'profession',
     'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality', 'residence_area',
     'residence_description', 'house_number', 'street_name', 'postal_address', 'residential_phone',
