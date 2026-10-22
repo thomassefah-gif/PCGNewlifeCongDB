@@ -260,7 +260,12 @@ export default function MemberDetailPage() {
         </div>}
 
         {tab === 'Family & Relationships' && <div className="space-y-7 p-5 sm:p-7">
-          <div><h2 className="mb-3 font-semibold text-slate-900">Linked Church Members</h2>
+          {(member.spouse_name || member.spouse_phone || member.children_names || member.children_contacts) && <div><h2 className="mb-2 font-semibold text-slate-900">Family Details</h2><InfoGrid items={[
+            ...(member.spouse_name ? [['Spouse Name', member.spouse_name] as [string, string]] : []),
+            ...(member.spouse_phone ? [['Spouse Contact', member.spouse_phone] as [string, string]] : []),
+            ...(member.children_names ? [['Children Names', member.children_names] as [string, string]] : []),
+            ...(member.children_contacts ? [['Children Contacts', member.children_contacts] as [string, string]] : []),
+          ]} /></div>}          <div><h2 className="mb-3 font-semibold text-slate-900">Linked Church Members</h2>
             {member.member_relationships.length === 0 ? <p className="rounded-xl bg-stone-50 px-4 py-6 text-center text-sm text-slate-500">No church member relationships recorded.</p> : <div className="grid gap-3 md:grid-cols-2">
               {member.member_relationships.map((relationship) => <article key={`${relationship.id}-${relationship.direction}`} className="flex items-center gap-3 rounded-xl border border-stone-200 p-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary"><UserRound aria-hidden="true" size={18} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-800">{relationship.related_member ? [relationship.related_member.title, relationship.related_member.first_name, relationship.related_member.surname].filter(Boolean).join(' ') : 'Member record unavailable'}</p><p className="mt-0.5 text-xs text-slate-500">{relationshipLabel(relationship.relationship_type, relationship.direction)}{relationship.is_primary ? ' · Primary' : ''}</p><p className="mt-1 truncate text-xs text-slate-500">{relationship.related_member?.mobile_phone || relationship.related_member?.email || ''}</p></div>

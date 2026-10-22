@@ -7,6 +7,10 @@ export type MarriageType = 'Ordinance' | 'Customary';
 
 export interface Member {
   id: string;
+  spouse_name?: string | null;
+  spouse_phone?: string | null;
+  children_names?: string | null;
+  children_contacts?: string | null;
   groups?: string[];
   member_code: string | null;
   title: string | null;
@@ -119,6 +123,10 @@ export interface MemberProfile extends Member {
 
 /** Form values, including group selectors and details that map to related tables. */
 export interface MemberFormInput {
+  spouse_name?: string | null;
+  spouse_phone?: string | null;
+  children_names?: string | null;
+  children_contacts?: string | null;
   member_code: string;
   title: string;
   title_other: string;

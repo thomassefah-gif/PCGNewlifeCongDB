@@ -86,7 +86,7 @@ export async function deleteMember(id: string): Promise<void> {
 }
 
 const memberPayloadColumns = [
-  'title', 'title_other', 'member_code', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
+  'title', 'title_other', 'member_code', 'spouse_name', 'spouse_phone', 'children_names', 'children_contacts', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
   'date_of_birth_is_estimated', 'communicant_status', 'marital_status', 'marriage_type',
   'profession', 'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality',
   'residence_area', 'residence_description', 'house_number', 'street_name', 'postal_address',
@@ -113,6 +113,10 @@ function toMemberPayload(input: MemberInputWithAdminNotes) {
     marital_status: isYouth ? null : input.marital_status || null,
     marriage_type: isYouth || input.marital_status !== 'Married' ? null : input.marriage_type || null,
     profession: isYouth ? null : nullableText(input.profession),
+    spouse_name: isYouth || input.marital_status !== 'Married' ? null : input.spouse_name?.trim() || null,
+    spouse_phone: isYouth || input.marital_status !== 'Married' ? null : input.spouse_phone?.trim() || null,
+    children_names: isYouth ? null : input.children_names?.trim() || null,
+    children_contacts: isYouth ? null : input.children_contacts?.trim() || null,
     occupation: isYouth ? null : nullableText(input.occupation),
     special_interests: nullableText(input.special_interests),
     home_town: nullableText(input.home_town),
@@ -266,7 +270,7 @@ async function syncSpouseContact(memberId: string, input: MemberFormInput): Prom
 
 export async function getMemberById(id: string, includeAdminNotes = false): Promise<MemberProfile> {
   const memberColumns = [
-    'id', 'member_code', 'title', 'title_other', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
+    'id', 'member_code', 'spouse_name', 'spouse_phone', 'children_names', 'children_contacts', 'title', 'title_other', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
     'date_of_birth_is_estimated', 'communicant_status', 'marital_status', 'marriage_type', 'profession',
     'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality', 'residence_area',
     'residence_description', 'house_number', 'street_name', 'postal_address', 'residential_phone',

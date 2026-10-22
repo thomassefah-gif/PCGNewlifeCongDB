@@ -15,6 +15,10 @@ const requiredChoice = <T extends string>(values: readonly T[], message: string)
   z.union([...(values.map((value) => z.literal(value))), z.literal('')]).refine((value) => value !== '', message);
 
 const formSchema = z.object({
+  spouse_name: z.string().nullish(),
+  spouse_phone: z.string().nullish(),
+  children_names: z.string().nullish(),
+  children_contacts: z.string().nullish(),
   member_code: z.string(),
   title: z.string(),
   title_other: z.string(),
@@ -75,6 +79,7 @@ const formSchema = z.object({
 type ParentOption = Pick<Member, 'id' | 'title' | 'first_name' | 'surname' | 'email' | 'mobile_phone'>;
 
 const defaults: MemberFormInput = {
+  spouse_name: '', spouse_phone: '', children_names: '', children_contacts: '',
   member_code: '',
   title: '', title_other: '', surname: '', first_name: '', maiden_name: '', sex: '', date_of_birth: '',
   date_of_birth_is_estimated: false, communicant_status: '', marital_status: '', marriage_type: '',
@@ -103,7 +108,8 @@ function profileToForm(member: MemberProfile): MemberFormInput {
 
   return {
     ...defaults,
-    member_code: text(member.member_code), title_other: text(member.title_other), surname: text(member.surname),
+    spouse_name: text(member.spouse_name), spouse_phone: text(member.spouse_phone),
+    children_names: text(member.children_names), children_contacts: text(member.children_contacts),    member_code: text(member.member_code), title_other: text(member.title_other), surname: text(member.surname),
     first_name: text(member.first_name), maiden_name: text(member.maiden_name), sex: member.sex ?? '',
     date_of_birth: text(member.date_of_birth), date_of_birth_is_estimated: member.date_of_birth_is_estimated,
     communicant_status: member.communicant_status ?? '', marital_status: member.marital_status ?? '',
@@ -446,7 +452,11 @@ export default function MemberFormPage() {
               <Field label="Spouse Full Name" error={errors.spouse_full_name?.message}><input className={inputClass} {...register('spouse_full_name')} /></Field>
               <Field label="Spouse Contact Number"><input className={inputClass} inputMode="tel" {...register('spouse_contact_number')} /></Field>
               <Field label="Spouse Postal Address"><input className={inputClass} {...register('spouse_postal_address')} /></Field>
+              <Field label="Spouse Name"><input className={inputClass} {...register('spouse_name')} /></Field>
+              <Field label="Spouse Contact Phone"><input className={inputClass} inputMode="tel" {...register('spouse_phone')} /></Field>
             </>}
+            <Field label="Children Names"><textarea rows={3} className={inputClass} placeholder="One name per line" {...register('children_names')} /></Field>
+            <Field label="Children Contacts"><textarea rows={3} className={inputClass} placeholder="One contact per line" {...register('children_contacts')} /></Field>
           </div>
         </section>
       )}
