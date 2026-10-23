@@ -468,7 +468,6 @@ export default function MemberFormPage() {
           <Field label="Street Name"><input className={inputClass} {...register('street_name')} /></Field>
           <Field label="Postal Address"><input className={inputClass} {...register('postal_address')} /></Field>
           <Field label="Mobile Phone"><input className={inputClass} inputMode="tel" autoComplete="tel" {...register('mobile_phone')} /></Field>
-          <Field label="Residential Phone"><input className={inputClass} inputMode="tel" {...register('residential_phone')} /></Field>
           <Field label="Email" error={emailError}><input type="email" className={inputClass} autoComplete="email" {...register('email')} /></Field>
           <Field label="Member Status"><select className={selectClass} {...register('status')}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field>
         </div>
