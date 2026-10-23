@@ -178,6 +178,8 @@ export default function MemberDetailPage() {
     Confirmation_Date: member_sacraments?.confirmation_date ?? '',
   }))(member);
 
+  const generationalGroup = member.member_groups.find((item) => item.membership_status === 'Active' && item.groups?.group_type === 'generational')?.groups?.name ?? null;
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <button type="button" onClick={() => navigate('/contacts')} className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-primary">
@@ -193,6 +195,7 @@ export default function MemberDetailPage() {
                 <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{memberName(member)}</h1>
                 <Badge variant={member.status === 'Active' ? 'active' : 'inactive'}>{member.status}</Badge>
                 <Badge variant={member.is_distant_member ? 'distant' : 'primary'}>{member.is_distant_member ? 'Distant' : 'Resident'}</Badge>
+                {generationalGroup && generationalGroup !== 'No Group Membership' && <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">{generationalGroup}</span>}
               </div>
               <p className="mt-1 text-sm text-slate-500">{member.email || 'No email recorded'} <span className="px-1">·</span> {member.mobile_phone || member.residential_phone || 'No phone recorded'}</p>
               {member.title_other && <p className="mt-1 text-xs text-slate-500">{member.title_other}</p>}
