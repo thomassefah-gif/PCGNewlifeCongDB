@@ -90,7 +90,7 @@ const memberPayloadColumns = [
   'date_of_birth_is_estimated', 'communicant_status', 'marital_status', 'marriage_type',
   'profession', 'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality',
   'residence_area', 'residence_description', 'house_number', 'street_name', 'postal_address',
-  'residential_phone', 'mobile_phone', 'email', 'status', 'is_distant_member',
+  'mobile_phone', 'email', 'status', 'is_distant_member',
   'date_joined_new_life', 'photo_url', 'admin_notes', 'emergency_contact_name', 'emergency_contact_phone',
 ] as const;
 
@@ -128,7 +128,6 @@ function toMemberPayload(input: MemberInputWithAdminNotes) {
     house_number: nullableText(input.house_number),
     street_name: nullableText(input.street_name),
     postal_address: nullableText(input.postal_address),
-    residential_phone: nullableText(input.residential_phone),
     mobile_phone: nullableText(input.mobile_phone),
     email: nullableText(input.email),
     status: input.status,
