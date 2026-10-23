@@ -90,7 +90,7 @@ const memberPayloadColumns = [
   'date_of_birth_is_estimated', 'communicant_status', 'marital_status', 'marriage_type',
   'profession', 'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality',
   'residence_area', 'residence_description', 'house_number', 'street_name', 'postal_address',
-  'mobile_phone', 'email', 'status', 'is_distant_member',
+  'mobile_phone', 'residential_phone', 'email', 'status', 'is_distant_member',
   'date_joined_new_life', 'photo_url', 'admin_notes', 'emergency_contact_name', 'emergency_contact_phone',
 ] as const;
 
@@ -129,6 +129,7 @@ function toMemberPayload(input: MemberInputWithAdminNotes) {
     street_name: nullableText(input.street_name),
     postal_address: nullableText(input.postal_address),
     mobile_phone: nullableText(input.mobile_phone),
+    residential_phone: nullableText(input.residential_phone),
     email: nullableText(input.email),
     status: input.status,
     is_distant_member: input.is_distant_member,
@@ -273,7 +274,7 @@ export async function getMemberById(id: string, includeAdminNotes = false): Prom
     'date_of_birth_is_estimated', 'communicant_status', 'marital_status', 'marriage_type', 'profession',
     'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality', 'residence_area',
     'residence_description', 'house_number', 'street_name', 'postal_address', 'residential_phone',
-    'mobile_phone', 'emergency_contact_name', 'emergency_contact_phone', 'photo_url', 'email', 'status',
+    'mobile_phone', 'residential_phone', 'emergency_contact_name', 'emergency_contact_phone', 'photo_url', 'email', 'status',
     'is_distant_member', 'date_joined_new_life', 'date_joined_pcg',
     'date_joined_new_life_is_estimated', 'date_joined_pcg_is_estimated', 'created_at',
     ...(includeAdminNotes ? ['admin_notes'] : []),

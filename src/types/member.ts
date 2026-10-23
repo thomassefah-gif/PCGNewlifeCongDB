@@ -153,6 +153,7 @@ export interface MemberFormInput {
   street_name: string;
   postal_address: string;
   mobile_phone: string;
+  residential_phone: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
   photo_url: string;

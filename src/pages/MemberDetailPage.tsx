@@ -234,7 +234,7 @@ export default function MemberDetailPage() {
           <div><h2 className="mb-2 font-semibold text-slate-900">Origin &amp; Residence</h2><InfoGrid items={[
             ['Home Town', member.home_town], ['Place of Birth', member.place_of_birth], ['Nationality', member.nationality],
             ['Residence Area', member.residence_area], ['Area Description', member.residence_description], ['House Number', member.house_number],
-            ['Street Name', member.street_name], ['Postal Address', member.postal_address], ['Mobile Phone', member.mobile_phone],
+            ['Street Name', member.street_name], ['Postal Address', member.postal_address], ['Mobile Phone', member.mobile_phone], ['Other Phone Number', member.residential_phone || '—'],
             ['Email', member.email], ['Location Status', member.is_distant_member ? 'Distant Member' : 'Resident Member'],
           ]} /></div>
           <div><h2 className="mb-2 font-semibold text-slate-900">Church Membership</h2><InfoGrid items={[

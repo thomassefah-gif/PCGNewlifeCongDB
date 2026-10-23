@@ -44,6 +44,7 @@ const formSchema = z.object({
   street_name: z.string(),
   postal_address: z.string(),
   mobile_phone: z.string(),
+  residential_phone: z.string(),
   emergency_contact_name: z.string(),
   emergency_contact_phone: z.string(),
   photo_url: z.string(),
@@ -78,7 +79,7 @@ const defaults: MemberFormInput = {
   date_of_birth_is_estimated: false, communicant_status: '', marital_status: '', marriage_type: '',
   profession: '', occupation: '', special_interests: '', home_town: '', place_of_birth: '', nationality: '',
   residence_area: '', residence_description: '', house_number: '', street_name: '', postal_address: '',
-  mobile_phone: '', emergency_contact_name: '', emergency_contact_phone: '', photo_url: '', email: '', status: 'Active', is_distant_member: false,
+  mobile_phone: '', residential_phone: '', emergency_contact_name: '', emergency_contact_phone: '', photo_url: '', email: '', status: 'Active', is_distant_member: false,
   date_joined_new_life: '', date_joined_pcg: '',
   date_joined_new_life_is_estimated: false, date_joined_pcg_is_estimated: false,
   primary_group_id: '', primary_group_name: '', family_group_id: '', interest_group_ids: [],
@@ -114,7 +115,7 @@ function profileToForm(member: MemberProfile): MemberFormInput {
     place_of_birth: text(member.place_of_birth), nationality: text(member.nationality),
     residence_area: text(member.residence_area), residence_description: text(member.residence_description),
     house_number: text(member.house_number), street_name: text(member.street_name), postal_address: text(member.postal_address),
-    mobile_phone: text(member.mobile_phone),
+    mobile_phone: text(member.mobile_phone), residential_phone: text(member.residential_phone),
     emergency_contact_name: text(member.emergency_contact_name), emergency_contact_phone: text(member.emergency_contact_phone), email: text(member.email),
     photo_url: text(member.photo_url),
     status: member.status, is_distant_member: member.is_distant_member,
@@ -467,6 +468,7 @@ export default function MemberFormPage() {
           <Field label="Street Name"><input className={inputClass} {...register('street_name')} /></Field>
           <Field label="Postal Address"><input className={inputClass} {...register('postal_address')} /></Field>
           <Field label="Mobile Phone"><input className={inputClass} inputMode="tel" autoComplete="tel" {...register('mobile_phone')} /></Field>
+          <Field label="Other Phone Number"><input className={inputClass} inputMode="tel" placeholder="e.g. 0240000000 (Optional secondary phone)" {...register('residential_phone')} /></Field>
           <Field label="Email" error={emailError}><input type="email" className={inputClass} autoComplete="email" {...register('email')} /></Field>
           <Field label="Member Status"><select className={selectClass} {...register('status')}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field>
         </div>
