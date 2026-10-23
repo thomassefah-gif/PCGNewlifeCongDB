@@ -352,6 +352,9 @@ export async function getMemberById(id: string, includeAdminNotes = false): Prom
   return {
     ...(baseMember as unknown as MemberProfile),
     member_groups: memberGroups,
+    generational_group: memberGroups.find((g) => g.membership_status === 'Active' && g.is_primary && g.groups?.group_type === 'generational')?.groups?.name,
+    family_group: memberGroups.find((g) => g.membership_status === 'Active' && g.groups?.group_type === 'family')?.groups?.name,
+    area_description: (baseMember as { residence_description?: string | null }).residence_description ?? undefined,
     member_sacraments: sacraments,
     member_relationships: relationships,
     member_family_contacts: familyContacts,

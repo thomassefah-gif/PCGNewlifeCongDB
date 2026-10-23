@@ -113,6 +113,9 @@ export interface MemberRelationship {
 
 export interface MemberProfile extends Member {
   member_groups: MemberGroup[];
+  area_description?: string;
+  generational_group?: string;
+  family_group?: string;
   member_sacraments: MemberSacraments | null;
   member_relationships: MemberRelationship[];
   member_family_contacts: MemberFamilyContact[];
