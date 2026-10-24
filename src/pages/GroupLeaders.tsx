@@ -11,16 +11,6 @@ import { getUsers, type SystemUser } from '../lib/queries/users';
 import { supabase } from '../lib/supabaseClient';
 import type { Member } from '../types/member';
 
-interface GroupLeaderAction {
-  action: 'create' | 'reset_password' | 'update_group' | 'toggle_active' | 'delete';
-  userId?: string;
-  fullName?: string;
-  email?: string;
-  password?: string;
-  assignedGroup?: string;
-  isActive?: boolean;
-}
-
 interface Coverage {
   name: string;
   members: number;
@@ -106,12 +96,6 @@ export default function GroupLeadersPage() {
   useEffect(() => { if (role === 'admin') void load(); }, [load, role]);
 
   const groupedLeaders = leaders;
-  const invokeAction = async (payload: GroupLeaderAction): Promise<void> => {
-    const { data, error: invocationError } = await supabase.functions.invoke('create-group-leader', { body: payload });
-    if (invocationError) throw new Error(invocationError.message || 'The group leader request failed.');
-    const result = data as { success?: boolean; error?: string } | null;
-    if (!result?.success) throw new Error(result?.error || 'The group leader request failed.');
-  };
 
   const createLeader = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -119,7 +103,16 @@ export default function GroupLeadersPage() {
     setError(null);
     setSuccess(null);
     try {
-      await invokeAction({ action: 'create', fullName, email, assignedGroup, password });
+      const { data, error: rpcError } = await supabase.rpc('admin_create_group_leader', {
+        p_email: email.trim(),
+        p_password: password,
+        p_full_name: fullName.trim(),
+        p_assigned_group: assignedGroup,
+      });
+      if (rpcError) throw rpcError;
+      const result = data as { success?: boolean; error?: string } | null;
+      if (result?.error) throw new Error(result.error);
+      if (result?.success !== true) throw new Error('The group leader account could not be created.');
       setSuccess(`Leader account created for ${assignedGroup}.`);
       setFullName('');
       setEmail('');
@@ -137,7 +130,15 @@ export default function GroupLeadersPage() {
     setError(null);
     setSuccess(null);
     try {
-      await invokeAction({ action: 'update_group', userId: leader.id, assignedGroup: group });
+      const { data, error: updateError } = await supabase
+        .from('profiles')
+        .update({ assigned_group: group })
+        .eq('id', leader.id)
+        .eq('role', 'group_leader')
+        .select('id')
+        .maybeSingle();
+      if (updateError) throw updateError;
+      if (!data) throw new Error('Group leader account not found.');
       setSuccess(`${leader.full_name || leader.email || 'Leader'} reassigned to ${group}.`);
       await load();
     } catch (caughtError) {
@@ -152,7 +153,15 @@ export default function GroupLeadersPage() {
     setError(null);
     setSuccess(null);
     try {
-      await invokeAction({ action: 'toggle_active', userId: leader.id, isActive: !leader.is_active });
+      const { data, error: updateError } = await supabase
+        .from('profiles')
+        .update({ is_active: !leader.is_active })
+        .eq('id', leader.id)
+        .eq('role', 'group_leader')
+        .select('id')
+        .maybeSingle();
+      if (updateError) throw updateError;
+      if (!data) throw new Error('Group leader account not found.');
       setSuccess(`${leader.full_name || leader.email || 'Leader'} ${leader.is_active ? 'disabled' : 'enabled'}.`);
       await load();
     } catch (caughtError) {
@@ -167,7 +176,13 @@ export default function GroupLeadersPage() {
     setError(null);
     setSuccess(null);
     try {
-      await invokeAction({ action: 'reset_password', userId: leader.id, password: resetPassword });
+      const { data, error: invocationError } = await supabase.functions.invoke('create-group-leader', {
+        body: { action: 'reset_password', userId: leader.id, password: resetPassword },
+      });
+      if (invocationError) throw new Error(invocationError.message || 'The password reset request failed.');
+      const result = data as { success?: boolean; error?: string } | null;
+      if (result?.error) throw new Error(result.error);
+      if (result?.success !== true) throw new Error('The password reset request failed.');
       setSuccess(`Password reset for ${leader.full_name || leader.email || 'leader'}.`);
       setResettingId(null);
       setResetPassword('');
@@ -184,7 +199,15 @@ export default function GroupLeadersPage() {
     setError(null);
     setSuccess(null);
     try {
-      await invokeAction({ action: 'delete', userId: deleteTarget.id });
+      const { data, error: deleteError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', deleteTarget.id)
+        .eq('role', 'group_leader')
+        .select('id')
+        .maybeSingle();
+      if (deleteError) throw deleteError;
+      if (!data) throw new Error('Group leader account not found.');
       setSuccess(`${deleteTarget.full_name || deleteTarget.email || 'Leader'} deleted.`);
       setDeleteTarget(null);
       await load();
