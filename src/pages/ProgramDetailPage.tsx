@@ -12,6 +12,7 @@ import { calculateAge, formatDate } from '../lib/date';
 import { addMemberToGroup, getGroupById, getProgramMembers, removeMemberFromGroup, updateGroupMembership, type GroupMembershipFilter, type GroupWithCount, type ProgramMember } from '../lib/queries/groups';
 import { searchMembers } from '../lib/queries/members';
 import { supabase } from '../lib/supabaseClient';
+import { useGroupScope } from '../hooks/useGroupScope';
 import type { Member } from '../types/member';
 
 type MemberLookup = Pick<Member, 'id' | 'title' | 'first_name' | 'surname' | 'email' | 'mobile_phone' | 'status'>;
@@ -24,6 +25,7 @@ export default function ProgramDetailPage() {
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { canEdit } = useGroupScope();
   const [group, setGroup] = useState<GroupWithCount | null>(null);
   const [memberships, setMemberships] = useState<ProgramMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,7 +160,7 @@ export default function ProgramDetailPage() {
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
           <div className="flex items-start gap-4"><div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"><UsersRound aria-hidden="true" size={24} /></div><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{group.name}</h1><Badge variant="primary">{group.group_type}</Badge></div><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{group.description || 'No description provided.'}</p><p className="mt-2 text-sm font-medium text-slate-500">{group.member_count} active {group.member_count === 1 ? 'member' : 'members'}</p></div></div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" icon={<UsersRound aria-hidden="true" size={16} />} onClick={() => { setAddModalOpen(true); setSelectedMember(null); setMemberSearch(''); setMemberResults([]); }}>Add Member to Group</Button>
+            {canEdit && <Button type="button" icon={<UsersRound aria-hidden="true" size={16} />} onClick={() => { setAddModalOpen(true); setSelectedMember(null); setMemberSearch(''); setMemberResults([]); }}>Add Member to Group</Button>}
             <ExportButton data={exportedMembers} filename={`group_${group.name}`} label="Export Group Members (CSV)" isMemberData />
           </div>
         </div>
@@ -181,7 +183,7 @@ export default function ProgramDetailPage() {
                   <td className="px-5 py-4"><div className="flex min-w-[210px] items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primaryDark">{initials}</div><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900">{joinedName(member)}</p><p className="truncate text-xs text-slate-500">{member.email || 'No email recorded'}</p></div></div></td>
                   <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">{member.mobile_phone || member.residential_phone || '—'}</td><td className="px-4 py-4 text-sm text-slate-600">{member.sex || '—'}</td><td className="px-4 py-4 text-sm text-slate-600">{calculateAge(member.date_of_birth) ?? '—'}</td>
                   <td className="px-4 py-4"><Badge variant={membership.membership_status === 'Active' ? 'active' : 'inactive'}>{membership.membership_status}</Badge></td><td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">{formatDate(membership.joined_at)}</td>
-                  <td className="px-4 py-4"><div className="flex justify-end gap-1"><button type="button" title="View profile" aria-label={`View ${joinedName(member)} profile`} onClick={() => navigate(`/contacts/${member.id}`)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Eye aria-hidden="true" size={17} /></button><button type="button" title="Edit membership status" aria-label={`Edit ${joinedName(member)} membership status`} onClick={() => { setMembershipToEdit(membership); setNextStatus(membership.membership_status); }} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Pencil aria-hidden="true" size={16} /></button><button type="button" title="Remove from group" aria-label={`Remove ${joinedName(member)} from group`} onClick={() => setMembershipToRemove(membership)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-danger/10 hover:text-danger"><UserMinus aria-hidden="true" size={17} /></button></div></td>
+                  <td className="px-4 py-4"><div className="flex justify-end gap-1"><button type="button" title="View profile" aria-label={`View ${joinedName(member)} profile`} onClick={() => navigate(`/contacts/${member.id}`)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Eye aria-hidden="true" size={17} /></button>{canEdit && <><button type="button" title="Edit membership status" aria-label={`Edit ${joinedName(member)} membership status`} onClick={() => { setMembershipToEdit(membership); setNextStatus(membership.membership_status); }} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Pencil aria-hidden="true" size={16} /></button><button type="button" title="Remove from group" aria-label={`Remove ${joinedName(member)} from group`} onClick={() => setMembershipToRemove(membership)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-danger/10 hover:text-danger"><UserMinus aria-hidden="true" size={17} /></button></>}</div></td>
                 </tr>;
               })}</tbody>
             </table>
@@ -190,7 +192,7 @@ export default function ProgramDetailPage() {
         {!loading && memberships.length > 0 && <div className="border-t border-stone-100 px-5 py-3 text-xs text-slate-500">Showing {memberships.length} member{memberships.length === 1 ? '' : 's'}{search ? ` matching “${search}”` : ''}</div>}
       </section>
 
-      <Modal isOpen={addModalOpen} onClose={() => { if (!adding) setAddModalOpen(false); }} title="Add Member to Group" maxWidth="lg">
+      <Modal isOpen={addModalOpen && canEdit} onClose={() => { if (!adding) setAddModalOpen(false); }} title="Add Member to Group" maxWidth="lg">
         <div className="space-y-4">
           <p className="text-sm text-slate-500">Search for a church member by name, email, or phone number.</p>
           <label className="flex h-10 items-center gap-2 rounded-xl border border-stone-200 px-3 text-slate-400 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10"><Search aria-hidden="true" size={17} /><input autoFocus type="search" value={memberSearch} onChange={(event) => { setMemberSearch(event.target.value); setSelectedMember(null); }} placeholder="Type at least 2 characters..." className="min-w-0 flex-1 bg-transparent text-sm text-slate-800 outline-none" /></label>
@@ -201,11 +203,11 @@ export default function ProgramDetailPage() {
         </div>
       </Modal>
 
-      <Modal isOpen={Boolean(membershipToEdit)} onClose={() => { if (!savingStatus) setMembershipToEdit(null); }} title="Update Group Membership">
+      <Modal isOpen={canEdit && Boolean(membershipToEdit)} onClose={() => { if (!savingStatus) setMembershipToEdit(null); }} title="Update Group Membership">
         <div className="space-y-5"><p className="text-sm text-slate-600">Set {membershipToEdit ? joinedName(membershipToEdit.members) : 'this member'}'s status in {group.name}.</p><label className="block"><span className="mb-1.5 block text-sm font-medium text-slate-700">Membership Status</span><select value={nextStatus} onChange={(event) => setNextStatus(event.target.value as 'Active' | 'Inactive')} className="h-10 w-full rounded-xl border border-stone-300 bg-white px-3 text-sm"><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setMembershipToEdit(null)} disabled={savingStatus}>Cancel</Button><Button type="button" loading={savingStatus} onClick={() => void saveMembershipStatus()}>Save Status</Button></div></div>
       </Modal>
 
-      <ConfirmDialog isOpen={Boolean(membershipToRemove)} onClose={() => { if (!removing) setMembershipToRemove(null); }} onConfirm={confirmRemove} title="Remove from group" message={`Remove ${membershipToRemove ? joinedName(membershipToRemove.members) : 'this member'} from ${group.name}? This will NOT delete the member from the church database.`} confirmLabel="Remove from group" loading={removing} />
+      <ConfirmDialog isOpen={canEdit && Boolean(membershipToRemove)} onClose={() => { if (!removing) setMembershipToRemove(null); }} onConfirm={confirmRemove} title="Remove from group" message={`Remove ${membershipToRemove ? joinedName(membershipToRemove.members) : 'this member'} from ${group.name}? This will NOT delete the member from the church database.`} confirmLabel="Remove from group" loading={removing} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { routeItems } from '../../routes/routeItems';
 import { useAuth } from '../../features/auth/AuthContext';
 import { getErrorMessage } from '../../lib/errors';
 import { useToast } from '../ui/Toast';
+import { useGroupScope } from '../../hooks/useGroupScope';
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -16,8 +17,14 @@ export default function Sidebar({ mobileOpen, onNavigate }: SidebarProps) {
   const [logoUnavailable, setLogoUnavailable] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const navigate = useNavigate();
-  const { signOut, role } = useAuth();
+  const { signOut } = useAuth();
+  const { role, isLeader } = useGroupScope();
   const { showToast } = useToast();
+  const visibleRoutes = routeItems.filter((item) =>
+    (!item.adminOnly || role === 'admin')
+    && (!item.editorOnly || role === 'admin' || role === 'user')
+    && (!isLeader || ['/dashboard', '/contacts', '/programs', '/announcements', '/attendance'].includes(item.path)),
+  );
 
   const handleSignOut = async () => {
     if (signingOut) return;
@@ -66,7 +73,7 @@ export default function Sidebar({ mobileOpen, onNavigate }: SidebarProps) {
 
       <p className="shrink-0 px-3 pb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Workspace</p>
       <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-color:rgba(255,255,255,0.35)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/30 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5" aria-label="Workspace pages">
-        {routeItems.filter((item) => !item.adminOnly || role === 'admin').map(({ path, label, icon: Icon }) => (
+        {visibleRoutes.map(({ path, label, icon: Icon }) => (
           <NavLink
             key={path}
             to={path}

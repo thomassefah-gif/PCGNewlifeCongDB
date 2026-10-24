@@ -13,6 +13,9 @@ import { exportToCSV } from '../lib/csv';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../features/auth/AuthContext';
 import { restrictedGroup } from '../lib/permissions';
+import { useGroupScope } from '../hooks/useGroupScope';
+import GroupScopeBanner from '../components/GroupScopeBanner';
+import { canonicalGroupName } from '../lib/groupScope';
 import type { DistantFilter, Group, Member, MemberStatusFilter } from '../types/member';
 
 const PAGE_SIZE = 25;
@@ -25,6 +28,7 @@ export default function ContactsPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { role, userGroup } = useAuth();
+  const { canEdit, filterMembers } = useGroupScope();
   const restricted = restrictedGroup(role, userGroup);
   const [members, setMembers] = useState<Member[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -43,29 +47,17 @@ export default function ContactsPage() {
   const [exportingAll, setExportingAll] = useState(false);
   const requestSequence = useRef(0);
 
-  const restrictedId = restricted ? groups.find((group) => group.name === restricted)?.id ?? null : null;
-  const effectiveGroupId = restricted ? restrictedId ?? 'ALL' : groupId;
+  const restrictedId = restricted ? groups.find((group) => canonicalGroupName(group.name) === canonicalGroupName(restricted))?.id ?? null : null;
+  const effectiveGroupId = restricted ? 'ALL' : groupId;
 
   const fetchMembers = useCallback(async () => {
-    if (restricted) {
-      if (groupsLoading) return;
-      if (!restrictedId) {
-        setMembers([]);
-        setTotalCount(0);
-        setLoading(false);
-        return;
-      }
-    }
     const requestId = ++requestSequence.current;
     setLoading(true);
     setError(null);
     try {
       const result = await getMembers({ page, pageSize: PAGE_SIZE, search, status, groupId: effectiveGroupId, distant });
       if (requestId !== requestSequence.current) return;
-      let filtered = result.members;
-      if (restricted) {
-        filtered = filtered.filter((m) => m.groups?.some((g: string) => g.toLowerCase().includes(restricted.toLowerCase())));
-      }
+      const filtered = filterMembers(result.members);
       setMembers(filtered);
       setTotalCount(result.totalCount);
       if (result.members.length === 0 && page > 1 && (page - 1) * PAGE_SIZE >= result.totalCount) {
@@ -82,7 +74,7 @@ export default function ContactsPage() {
     } finally {
       if (requestId === requestSequence.current) setLoading(false);
     }
-  }, [distant, effectiveGroupId, groupsLoading, page, restricted, restrictedId, search, showToast, status]);
+  }, [distant, effectiveGroupId, filterMembers, page, restricted, search, showToast, status]);
 
   useEffect(() => {
     void fetchMembers();
@@ -158,14 +150,12 @@ export default function ContactsPage() {
     try {
       let allMembers: Member[];
       if (restricted) {
-        if (!restrictedId) { allMembers = []; } else {
-          const first = await getMembers({ page: 1, pageSize: 1000, groupId: restrictedId });
-          allMembers = first.members;
-          for (let nextPage = 2; allMembers.length < first.totalCount; nextPage += 1) {
-            const next = await getMembers({ page: nextPage, pageSize: 1000, groupId: restrictedId });
-            if (next.members.length === 0) break;
-            allMembers.push(...next.members);
-          }
+        const first = await getMembers({ page: 1, pageSize: 1000 });
+        allMembers = filterMembers(first.members);
+        for (let nextPage = 2; nextPage <= Math.ceil(first.totalCount / 1000); nextPage += 1) {
+          const next = await getMembers({ page: nextPage, pageSize: 1000 });
+          if (next.members.length === 0) break;
+          allMembers.push(...filterMembers(next.members));
         }
       } else {
         allMembers = await getAllMembers();
@@ -185,6 +175,7 @@ export default function ContactsPage() {
 
   return (
     <div className="space-y-6">
+      <GroupScopeBanner />
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <div className="flex items-center gap-2 text-primary">
@@ -197,9 +188,7 @@ export default function ContactsPage() {
         <div className="flex flex-wrap gap-2">
           <ExportButton<Member> data={selectedList} filename="selected_members" label="Export Selected (CSV)" isMemberData disabled={selectedList.length === 0} />
           <ExportButton<Member> data={members} filename="members" label="Export All (CSV)" isMemberData disabled={loading || totalCount === 0} loading={exportingAll} onExport={handleExportAll} />
-          <Button type="button" icon={<span aria-hidden="true" className="text-lg leading-none">+</span>} onClick={() => navigate('/contacts/new')}>
-            Add Member
-          </Button>
+          {canEdit && <Button type="button" icon={<span aria-hidden="true" className="text-lg leading-none">+</span>} onClick={() => navigate('/contacts/new')}>Add Member</Button>}
         </div>
       </div>
 
@@ -220,8 +209,8 @@ export default function ContactsPage() {
           <option value="ALL">All statuses</option><option value="Active">Active</option><option value="Inactive">Inactive</option>
         </select>
         <label className="sr-only" htmlFor="member-group-filter">Filter by group</label>
-        <select id="member-group-filter" value={restricted ? restrictedId ?? 'ALL' : groupId} onChange={(event) => changeGroup(event.target.value)} disabled={groupsLoading || Boolean(restricted)} className="h-10 rounded-xl border border-stone-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 disabled:opacity-60">
-          <option value="ALL">All groups</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+        <select id="member-group-filter" value={restricted ? restrictedId ?? 'ASSIGNED' : groupId} onChange={(event) => changeGroup(event.target.value)} disabled={groupsLoading || Boolean(restricted)} className="h-10 rounded-xl border border-stone-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 disabled:opacity-60">
+          <option value={restrictedId ?? 'ASSIGNED'}>{restricted || 'All groups'}</option>{!restricted && groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
         </select>
         <label className="sr-only" htmlFor="member-distant-filter">Filter by distant status</label>
         <select id="member-distant-filter" value={distant} onChange={(event) => changeDistant(event.target.value as DistantFilter)} className="h-10 rounded-xl border border-stone-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
@@ -289,7 +278,7 @@ export default function ContactsPage() {
                     <td className="px-4 py-4">
                       <div className="flex justify-end gap-1">
                         <button type="button" title="View member" aria-label={`View ${memberName(member)}`} onClick={() => navigate(`/contacts/${member.id}`)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Eye aria-hidden="true" size={17} /></button>
-                        <button type="button" title="Edit member" aria-label={`Edit ${memberName(member)}`} onClick={() => navigate(`/contacts/${member.id}/edit`)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Edit3 aria-hidden="true" size={16} /></button>
+                        {canEdit && <button type="button" title="Edit member" aria-label={`Edit ${memberName(member)}`} onClick={() => navigate(`/contacts/${member.id}/edit`)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Edit3 aria-hidden="true" size={16} /></button>}
                         {role === 'admin' && <button type="button" title="Delete member" aria-label={`Delete ${memberName(member)}`} onClick={() => setMemberToDelete(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-danger/10 hover:text-danger"><Trash2 aria-hidden="true" size={16} /></button>}
                       </div>
                     </td>

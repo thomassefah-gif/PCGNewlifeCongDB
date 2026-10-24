@@ -13,6 +13,9 @@ import { useAuth } from '../features/auth/AuthContext';
 import { exportToCSV } from '../lib/csv';
 import { getErrorMessage } from '../lib/errors';
 import { canDelete, canEdit, restrictedGroup } from '../lib/permissions';
+import { useGroupScope } from '../hooks/useGroupScope';
+import GroupScopeBanner from '../components/GroupScopeBanner';
+import { canonicalGroupName } from '../lib/groupScope';
 import {
   createAttendanceSession,
   deleteAttendanceSession,
@@ -43,6 +46,7 @@ function displayDate(value: string | null): string {
 
 export default function AttendancePage() {
   const { role, user, userGroup } = useAuth();
+  const { canMarkAttendance } = useGroupScope();
   const restricted = restrictedGroup(role, userGroup);
   const { showToast } = useToast();
   const [tab, setTab] = useState<'sessions' | 'absentees'>('sessions');
@@ -72,11 +76,11 @@ export default function AttendancePage() {
       const [list, stats, missing] = await Promise.all([
         fetchAttendanceSessions({ serviceType, startDate, endDate }),
         fetchAttendanceSummary(),
-        fetchAbsenteeMembers(ABSENT_THRESHOLD),
+        fetchAbsenteeMembers(ABSENT_THRESHOLD, restricted ?? 'Sunday Main Service'),
       ]);
-      setSessions(restricted ? list.filter((s) => s.service_type.includes(restricted)) : list);
+      setSessions(restricted ? list.filter((s) => canonicalGroupName(s.service_type) === canonicalGroupName(restricted)) : list);
       setSummary(stats);
-      setAbsentees(restricted ? missing.filter((a) => a.groups?.includes(restricted)) : missing);
+      setAbsentees(restricted ? missing.filter((a) => a.groups?.some((group) => canonicalGroupName(group) === canonicalGroupName(restricted))) : missing);
     } catch (err) {
       console.error('Failed to load attendance', err);
       setSessions([]);
@@ -176,6 +180,7 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-6">
+      <GroupScopeBanner />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Attendance & Service Check-in</h1>
@@ -244,7 +249,7 @@ export default function AttendancePage() {
                       <td className="px-4 py-2.5 text-right font-semibold text-primaryDark">{s.total_head_count}</td>
                       <td className="px-4 py-2.5">
                         <div className="flex justify-end gap-1">
-                          <Button size="sm" variant="ghost" aria-label="Check-in members" title="Check-in members" onClick={() => setCheckInSession(s)}><UserCheck aria-hidden="true" size={15} /></Button>
+                          {canMarkAttendance && <Button size="sm" variant="ghost" aria-label="Check-in members" title="Check-in members" onClick={() => setCheckInSession(s)}><UserCheck aria-hidden="true" size={15} /></Button>}
                           {mayEdit && (
                             <Button size="sm" variant="ghost" aria-label="Edit" onClick={() => { setEditing(s); setModalOpen(true); }}><Pencil aria-hidden="true" size={15} /></Button>
                           )}
@@ -326,7 +331,8 @@ export default function AttendancePage() {
       <MemberCheckInModal
         session={checkInSession}
         userId={userId}
-        readOnly={!mayEdit}
+        readOnly={!canMarkAttendance}
+        allowRemoval={role === 'admin' || role === 'user'}
         onClose={() => setCheckInSession(null)}
         onChanged={() => void load()}
       />

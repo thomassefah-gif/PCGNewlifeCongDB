@@ -18,6 +18,7 @@ export interface RouteItem {
   description: string;
   icon: LucideIcon;
   adminOnly?: boolean;
+  editorOnly?: boolean;
 }
 
 export const routeItems: RouteItem[] = [
@@ -28,7 +29,9 @@ export const routeItems: RouteItem[] = [
   { path: '/announcements', label: 'Announcements', description: 'Church news and important notices.', icon: Megaphone },
   { path: '/contributions', label: 'Contributions', description: 'Dues, tithes and offerings.', icon: Landmark },
   { path: '/attendance', label: 'Attendance', description: 'Service check-in and attendance tracking.', icon: CalendarCheck },
-  { path: '/field-builder', label: 'Field Builder', description: 'Custom contact fields will be managed here.', icon: Settings2, adminOnly: true },
+  { path: '/field-builder', label: 'Field Builder', description: 'Custom contact fields will be managed here.', icon: Settings2, editorOnly: true },
   { path: '/users', label: 'User Management', description: 'System user administration will be available here.', icon: UserRoundCog, adminOnly: true },
-  { path: '/imports', label: 'CSV Imports', description: 'CSV import and mapping tools will be available here.', icon: FileUp, adminOnly: true },
+  { path: '/group-leaders', label: 'Group Leaders', description: 'Manage generational group leader accounts.', icon: UsersRound, adminOnly: true },
+  { path: '/settings', label: 'Settings', description: 'Application settings.', icon: Settings2, adminOnly: true },
+  { path: '/imports', label: 'CSV Imports', description: 'CSV import and mapping tools will be available here.', icon: FileUp, editorOnly: true },
 ];

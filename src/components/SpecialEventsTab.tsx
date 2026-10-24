@@ -13,7 +13,7 @@ const inputClass = 'w-full rounded-xl border border-stone-300 px-3 text-sm outli
 export default function SpecialEventsTab() {
   const { role } = useAuth();
   const { showToast } = useToast();
-  const canManage = role !== 'viewer';
+  const canManage = role === 'admin' || role === 'user';
   const [events, setEvents] = useState<SpecialEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);

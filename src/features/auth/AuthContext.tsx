@@ -35,7 +35,7 @@ async function fetchProfile(currentUser: User | null): Promise<Profile | null> {
     .maybeSingle();
 
   if (error) throw error;
-  if (data?.role !== 'admin' && data?.role !== 'user' && data?.role !== 'viewer') return null;
+  if (data?.role !== 'admin' && data?.role !== 'user' && data?.role !== 'viewer' && data?.role !== 'group_leader') return null;
   return data as Profile;
 }
 

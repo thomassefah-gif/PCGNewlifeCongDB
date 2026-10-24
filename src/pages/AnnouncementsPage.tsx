@@ -13,6 +13,7 @@ import ExportButton from '../components/ui/ExportButton';
 import Modal from '../components/ui/Modal';
 import SpecialEventsTab from '../components/SpecialEventsTab';
 import { useToast } from '../components/ui/Toast';
+import { useAuth } from '../features/auth/AuthContext';
 import { bulkCreateAnnouncements, bulkInsertAnnouncements, createAnnouncement, deleteAnnouncement, getAnnouncements, updateAnnouncement, type Announcement, type AnnouncementInput } from '../lib/queries/announcements';
 import type { ParsedPdfAnnouncement } from '../lib/pdfImport';
 
@@ -48,6 +49,8 @@ export default function AnnouncementsPage() {
 
 function AnnouncementsTab() {
   const { showToast } = useToast();
+  const { role } = useAuth();
+  const canManage = role === 'admin' || role === 'user';
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -225,15 +228,25 @@ function AnnouncementsTab() {
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div><div className="flex items-center gap-2 text-primary"><Bell aria-hidden="true" size={18} /><span className="text-xs font-bold uppercase tracking-[0.16em]">Church updates</span></div><h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Announcements</h1><p className="mt-1 text-sm text-slate-600">Share news, events, and important notices with the congregation.</p></div>
-        <div className="flex flex-wrap gap-2"><ExportButton<Announcement> data={announcements} filename="announcements" label="Export Announcements (CSV)" /><Button type="button" variant="outline" icon={<FileText aria-hidden="true" size={16} />} disabled={!announcements.length} onClick={() => void exportAllPdf()}>Export PDF</Button><input ref={fileInputRef} type="file" accept=".csv,text/csv" className="sr-only" onChange={(event) => importCsv(event.target.files?.[0])} /><Button type="button" variant="outline" loading={importing} icon={<FileUp aria-hidden="true" size={16} />} onClick={() => fileInputRef.current?.click()}>Import CSV</Button><input ref={pdfInputRef} type="file" accept=".pdf,application/pdf" className="sr-only" onChange={(event) => void importPdf(event.target.files?.[0])} /><Button type="button" variant="outline" loading={parsingPdf} icon={<FileUp aria-hidden="true" size={16} />} onClick={() => pdfInputRef.current?.click()}>Import PDF</Button><Button type="button" icon={<Plus aria-hidden="true" size={17} />} onClick={createNew}>New Announcement</Button></div>
+        <div className="flex flex-wrap gap-2">
+          <ExportButton<Announcement> data={announcements} filename="announcements" label="Export Announcements (CSV)" />
+          <Button type="button" variant="outline" icon={<FileText aria-hidden="true" size={16} />} disabled={!announcements.length} onClick={() => void exportAllPdf()}>Export PDF</Button>
+          {canManage && <>
+            <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="sr-only" onChange={(event) => importCsv(event.target.files?.[0])} />
+            <Button type="button" variant="outline" loading={importing} icon={<FileUp aria-hidden="true" size={16} />} onClick={() => fileInputRef.current?.click()}>Import CSV</Button>
+            <input ref={pdfInputRef} type="file" accept=".pdf,application/pdf" className="sr-only" onChange={(event) => void importPdf(event.target.files?.[0])} />
+            <Button type="button" variant="outline" loading={parsingPdf} icon={<FileUp aria-hidden="true" size={16} />} onClick={() => pdfInputRef.current?.click()}>Import PDF</Button>
+            <Button type="button" icon={<Plus aria-hidden="true" size={17} />} onClick={createNew}>New Announcement</Button>
+          </>}
+        </div>
       </header>
 
       <section aria-label="Announcements list" className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-5 py-4"><div><h2 className="font-semibold text-slate-900">All Announcements</h2><p className="mt-0.5 text-xs text-slate-500">{announcements.length} {announcements.length === 1 ? 'announcement' : 'announcements'}</p></div></div>
-        {loading ? <div className="animate-pulse px-6 py-16 text-center text-sm font-medium text-slate-500">Loading announcements...</div> : announcements.length === 0 ? <EmptyState title="No announcements yet" description="Create an announcement to share important information with the congregation." /> : <div className="overflow-x-auto"><table className="w-full min-w-[780px] border-collapse text-left"><thead className="bg-stone-50 text-[11px] font-bold uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3.5">Title</th><th className="px-4 py-3.5">Date</th><th className="px-4 py-3.5">Content Preview</th><th className="px-4 py-3.5 text-right">Actions</th></tr></thead><tbody className="divide-y divide-stone-100">{announcements.map((item) => <tr key={item.id} className="hover:bg-accent/40"><td className="px-5 py-4"><p className="font-semibold text-slate-900">{item.title}</p></td><td className="whitespace-nowrap px-4 py-4"><Badge variant="primary"><span className="inline-flex items-center gap-1.5"><CalendarDays aria-hidden="true" size={13} />{format(parseISO(item.date), 'd MMM yyyy')}</span></Badge></td><td className="max-w-xl px-4 py-4"><p className="line-clamp-2 text-sm leading-5 text-slate-600">{item.content}</p></td><td className="px-4 py-4"><div className="flex justify-end gap-1"><button type="button" aria-label={`Download ${item.title} as PDF`} title="Download PDF" onClick={() => void exportOnePdf(item)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Download aria-hidden="true" size={16} /></button><button type="button" aria-label={`Edit ${item.title}`} onClick={() => editAnnouncement(item)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Pencil aria-hidden="true" size={16} /></button><button type="button" aria-label={`Delete ${item.title}`} onClick={() => setToDelete(item)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-danger/10 hover:text-danger"><Trash2 aria-hidden="true" size={16} /></button></div></td></tr>)}</tbody></table></div>}
+        {loading ? <div className="animate-pulse px-6 py-16 text-center text-sm font-medium text-slate-500">Loading announcements...</div> : announcements.length === 0 ? <EmptyState title="No announcements yet" description="Create an announcement to share important information with the congregation." /> : <div className="overflow-x-auto"><table className="w-full min-w-[780px] border-collapse text-left"><thead className="bg-stone-50 text-[11px] font-bold uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3.5">Title</th><th className="px-4 py-3.5">Date</th><th className="px-4 py-3.5">Content Preview</th><th className="px-4 py-3.5 text-right">Actions</th></tr></thead><tbody className="divide-y divide-stone-100">{announcements.map((item) => <tr key={item.id} className="hover:bg-accent/40"><td className="px-5 py-4"><p className="font-semibold text-slate-900">{item.title}</p></td><td className="whitespace-nowrap px-4 py-4"><Badge variant="primary"><span className="inline-flex items-center gap-1.5"><CalendarDays aria-hidden="true" size={13} />{format(parseISO(item.date), 'd MMM yyyy')}</span></Badge></td><td className="max-w-xl px-4 py-4"><p className="line-clamp-2 text-sm leading-5 text-slate-600">{item.content}</p></td><td className="px-4 py-4"><div className="flex justify-end gap-1"><button type="button" aria-label={`Download ${item.title} as PDF`} title="Download PDF" onClick={() => void exportOnePdf(item)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Download aria-hidden="true" size={16} /></button>{canManage && <><button type="button" aria-label={`Edit ${item.title}`} onClick={() => editAnnouncement(item)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Pencil aria-hidden="true" size={16} /></button><button type="button" aria-label={`Delete ${item.title}`} onClick={() => setToDelete(item)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-danger/10 hover:text-danger"><Trash2 aria-hidden="true" size={16} /></button></>}</div></td></tr>)}</tbody></table></div>}
       </section>
 
-      <Modal isOpen={modalOpen} onClose={() => { if (!saving) setModalOpen(false); }} title={editing ? 'Edit Announcement' : 'New Announcement'} maxWidth="lg">
+      <Modal isOpen={modalOpen && canManage} onClose={() => { if (!saving) setModalOpen(false); }} title={editing ? 'Edit Announcement' : 'New Announcement'} maxWidth="lg">
         <form className="space-y-4" onSubmit={handleSubmit(save)} noValidate>
           <div><label htmlFor="announcement-title" className="mb-1.5 block text-sm font-medium text-slate-700">Title <span className="text-danger">*</span></label><input id="announcement-title" autoFocus className="h-10 w-full rounded-xl border border-stone-300 px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" {...register('title')} />{errors.title && <p className="mt-1 text-xs text-danger">{errors.title.message}</p>}</div>
           <div><label htmlFor="announcement-date" className="mb-1.5 block text-sm font-medium text-slate-700">Date <span className="text-danger">*</span></label><input id="announcement-date" type="date" className="h-10 w-full rounded-xl border border-stone-300 px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" {...register('date')} />{errors.date && <p className="mt-1 text-xs text-danger">{errors.date.message}</p>}</div>
@@ -250,7 +263,7 @@ function AnnouncementsTab() {
         </div>
       </Modal>
 
-      <ConfirmDialog isOpen={Boolean(toDelete)} onClose={() => { if (!deleting) setToDelete(null); }} onConfirm={confirmDelete} title="Delete announcement" message={`Delete “${toDelete?.title ?? 'this announcement'}”? This action cannot be undone.`} confirmLabel="Delete Announcement" loading={deleting} />
+      <ConfirmDialog isOpen={canManage && Boolean(toDelete)} onClose={() => { if (!deleting) setToDelete(null); }} onConfirm={confirmDelete} title="Delete announcement" message={`Delete “${toDelete?.title ?? 'this announcement'}”? This action cannot be undone.`} confirmLabel="Delete Announcement" loading={deleting} />
     </div>
   );
 }

@@ -38,6 +38,7 @@ export default function ProgramsPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { role } = useAuth();
+  const canManageGroups = role === 'admin' || role === 'user';
   const [activeType, setActiveType] = useState<GroupType>('generational');
   const [groups, setGroups] = useState<GroupWithCount[]>([]);
   const [allGroups, setAllGroups] = useState<GroupWithCount[]>([]);
@@ -141,7 +142,7 @@ export default function ProgramsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <ExportButton<GroupWithCount> data={allGroups} filename="groups" label="Export All Groups (CSV)" />
-          <Button type="button" icon={<Plus aria-hidden="true" size={17} />} onClick={openCreateModal}>New Group</Button>
+          {canManageGroups && <Button type="button" icon={<Plus aria-hidden="true" size={17} />} onClick={openCreateModal}>New Group</Button>}
         </div>
       </header>
 
@@ -156,7 +157,7 @@ export default function ProgramsPage() {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {groups.map((group) => <article key={group.id} role="button" tabIndex={0} onClick={() => navigate(`/programs/${group.id}`)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/programs/${group.id}`); } }} className="group cursor-pointer rounded-2xl border border-stone-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                 <div className="flex items-start justify-between gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><FolderKanban aria-hidden="true" size={20} /></div><div className="flex items-center gap-1">
-                  <button type="button" aria-label={`Edit ${group.name}`} title="Edit group" onClick={(event) => { event.stopPropagation(); openEditModal(group); }} onKeyDown={(event) => event.stopPropagation()} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Pencil aria-hidden="true" size={16} /></button>
+                  {canManageGroups && <button type="button" aria-label={`Edit ${group.name}`} title="Edit group" onClick={(event) => { event.stopPropagation(); openEditModal(group); }} onKeyDown={(event) => event.stopPropagation()} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Pencil aria-hidden="true" size={16} /></button>}
                   {role === 'admin' && <button type="button" aria-label={`Delete ${group.name}`} title="Delete group" onClick={(event) => { event.stopPropagation(); setGroupToDelete(group); }} onKeyDown={(event) => event.stopPropagation()} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-danger/10 hover:text-danger"><Trash2 aria-hidden="true" size={16} /></button>}
                 </div></div>
                 <div className="mt-4"><h3 className="text-lg font-semibold text-slate-900 group-hover:text-primaryDark">{group.name}</h3><p className="mt-1 min-h-10 text-sm leading-5 text-slate-500">{group.description || 'No description provided.'}</p></div>
@@ -167,7 +168,7 @@ export default function ProgramsPage() {
         </div>
       </section>
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingGroup ? 'Edit Group' : 'Create New Group'}>
+      <Modal isOpen={modalOpen && canManageGroups} onClose={() => setModalOpen(false)} title={editingGroup ? 'Edit Group' : 'Create New Group'}>
         <form className="space-y-4" onSubmit={handleSubmit(saveGroup)} noValidate>
           <div><label htmlFor="group-name" className="mb-1.5 block text-sm font-medium text-slate-700">Name <span className="text-danger">*</span></label><input id="group-name" autoFocus className="h-10 w-full rounded-xl border border-stone-300 px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" {...register('name')} />{errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}</div>
           <div><label htmlFor="group-description" className="mb-1.5 block text-sm font-medium text-slate-700">Description</label><textarea id="group-description" rows={3} className="w-full rounded-xl border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" {...register('description')} /></div>

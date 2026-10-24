@@ -12,6 +12,12 @@ export interface Member {
   children_names?: string | null;
   children_contacts?: string | null;
   groups?: string[];
+  primary_generational_group?: string | null;
+  generational_group?: string | null;
+  family_group?: string | null;
+  church_family_group?: string | null;
+  phone?: string | null;
+  other_phone?: string | null;
   member_code: string | null;
   title: string | null;
   title_other: string | null;

@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient';
 import type { Group, Member, MemberFilters, MemberFormInput, MemberProfile, MemberRelationship } from '../../types/member';
 
-const memberColumns = 'id,member_code,title,surname,first_name,maiden_name,marriage_type,spouse_name,spouse_phone,spouse_postal_address,children_names,children_contacts,sex,date_of_birth,mobile_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at';
+const memberColumns = 'id,member_code,title,surname,first_name,maiden_name,marriage_type,spouse_name,spouse_phone,spouse_postal_address,children_names,children_contacts,sex,date_of_birth,mobile_phone,phone,other_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at,primary_generational_group,generational_group,family_group,church_family_group';
 
 export async function getMembers(filters: MemberFilters = {}): Promise<{ members: Member[]; totalCount: number }> {
   const page = Math.max(1, filters.page ?? 1);
@@ -91,12 +91,10 @@ const memberPayloadColumns = [
   'profession', 'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality',
   'residence_area', 'residence_description', 'house_number', 'street_name', 'postal_address',
   'mobile_phone', 'residential_phone', 'email', 'status', 'is_distant_member',
-  'date_joined_new_life', 'photo_url', 'admin_notes', 'emergency_contact_name', 'emergency_contact_phone',
+  'date_joined_new_life', 'photo_url', 'emergency_contact_name', 'emergency_contact_phone',
 ] as const;
 
-type MemberInputWithAdminNotes = MemberFormInput & { admin_notes?: string | null };
-
-function toMemberPayload(input: MemberInputWithAdminNotes) {
+function toMemberPayload(input: MemberFormInput) {
   const isYouth = ['Children Service', 'Junior Youth (JY)'].includes(input.primary_group_name);
   const nullableText = (value: string) => value.trim() || null;
   return {
@@ -135,7 +133,6 @@ function toMemberPayload(input: MemberInputWithAdminNotes) {
     is_distant_member: input.is_distant_member,
     date_joined_new_life: nullableText(input.date_joined_new_life),
     photo_url: nullableText(input.photo_url),
-    ...(input.admin_notes !== undefined ? { admin_notes: nullableText(input.admin_notes ?? '') } : {}),
     emergency_contact_name: nullableText(input.emergency_contact_name),
     emergency_contact_phone: nullableText(input.emergency_contact_phone),
   } satisfies Partial<Record<(typeof memberPayloadColumns)[number], unknown>>;
@@ -277,7 +274,6 @@ export async function getMemberById(id: string, includeAdminNotes = false): Prom
     'mobile_phone', 'residential_phone', 'emergency_contact_name', 'emergency_contact_phone', 'photo_url', 'email', 'status',
     'is_distant_member', 'date_joined_new_life', 'date_joined_pcg',
     'date_joined_new_life_is_estimated', 'date_joined_pcg_is_estimated', 'created_at',
-    ...(includeAdminNotes ? ['admin_notes'] : []),
   ].join(',');
 
   // Fetch the member separately: nested PostgREST joins are not required to get
@@ -292,6 +288,13 @@ export async function getMemberById(id: string, includeAdminNotes = false): Prom
     throw new Error(`Member query failed: ${memberError.message}`);
   }
   if (!baseMember) throw new Error('Member not found.');
+
+  let adminNotes: string | null = null;
+  if (includeAdminNotes) {
+    const { data, error } = await supabase.rpc('get_member_admin_notes', { p_member_id: id });
+    if (error) throw new Error(error.message || String(error));
+    adminNotes = data as string | null;
+  }
 
   const [groupResult, sacramentResult, outgoingResult, incomingResult, familyResult, customValueResult] = await Promise.all([
     supabase.from('member_groups').select('*').eq('member_id', id),
@@ -351,6 +354,7 @@ export async function getMemberById(id: string, includeAdminNotes = false): Prom
 
   return {
     ...(baseMember as unknown as MemberProfile),
+    admin_notes: adminNotes,
     member_groups: memberGroups,
     generational_group: memberGroups.find((g) => g.membership_status === 'Active' && g.is_primary && g.groups?.group_type === 'generational')?.groups?.name,
     family_group: memberGroups.find((g) => g.membership_status === 'Active' && g.groups?.group_type === 'family')?.groups?.name,
@@ -395,8 +399,15 @@ export async function updateMember(
   input: MemberFormInput | Partial<Pick<Member, 'admin_notes' | 'photo_url'>>,
 ): Promise<void> {
   if (!('first_name' in input)) {
-    const { error } = await supabase.from('members').update(input).eq('id', id);
-    if (error) throw error;
+    const { admin_notes, ...memberFields } = input;
+    if (admin_notes !== undefined) {
+      const { error } = await supabase.rpc('set_member_admin_notes', { p_member_id: id, p_notes: admin_notes });
+      if (error) throw error;
+    }
+    if (Object.keys(memberFields).length > 0) {
+      const { error } = await supabase.from('members').update(memberFields).eq('id', id);
+      if (error) throw error;
+    }
     return;
   }
   const { error } = await supabase.from('members').update(toMemberPayload(input)).eq('id', id);

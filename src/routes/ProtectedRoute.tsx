@@ -1,12 +1,16 @@
 import { Navigate, Outlet } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { useAuth } from '../features/auth/AuthContext';
+import type { UserRole } from '../types/auth';
 
 interface ProtectedRouteProps {
   requiredRole?: 'admin';
+  allowedRoles?: UserRole[];
+  children?: ReactNode;
 }
 
-export default function ProtectedRoute({ requiredRole }: ProtectedRouteProps) {
-  const { user, profile, loading } = useAuth();
+export default function ProtectedRoute({ requiredRole, allowedRoles, children }: ProtectedRouteProps) {
+  const { user, profile, loading, role } = useAuth();
 
   if (loading) {
     return (
@@ -20,6 +24,7 @@ export default function ProtectedRoute({ requiredRole }: ProtectedRouteProps) {
   if (!user) return <Navigate to="/login" replace />;
   if (profile && !profile.is_active) return <Navigate to="/login" replace />;
   if (requiredRole === 'admin' && profile?.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (allowedRoles && (!role || !allowedRoles.includes(role))) return <Navigate to="/dashboard" replace />;
 
-  return <Outlet />;
+  return children ?? <Outlet />;
 }

@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import type { UserRole } from '../../types/auth';
+import { GENERATIONAL_GROUPS } from '../groupScope';
 
 export interface SystemUser {
   id: string;
@@ -26,7 +27,7 @@ export async function updateUserRole(id: string, role: UserRole): Promise<void> 
   if (error) throw error;
 }
 
-export const ASSIGNABLE_GROUPS = ['Children Service', 'Junior Youth (JY)', 'YPG', 'YAF', 'Womens Fellowship', 'Mens Fellowship'] as const;
+export const ASSIGNABLE_GROUPS = GENERATIONAL_GROUPS;
 
 export async function updateUserAssignedGroup(id: string, assigned_group: string): Promise<void> {
   const { error } = await supabase.from('profiles').update({ assigned_group: assigned_group || null }).eq('id', id);

@@ -14,9 +14,11 @@ import AnnouncementsPage from '../pages/AnnouncementsPage';
 import AttendancePage from '../pages/AttendancePage';
 import ContributionsPage from '../pages/ContributionsPage';
 import FieldBuilderPage from '../pages/FieldBuilderPage';
+import GroupLeadersPage from '../pages/GroupLeaders';
 import { PlaceholderPage } from '../pages/PlaceholderPage';
 import ProtectedRoute from './ProtectedRoute';
 import { routeItems } from './routeItems';
+import { useAuth } from '../features/auth/AuthContext';
 
 const DashboardPage = lazy(() => import('../pages/DashboardPage'));
 
@@ -25,6 +27,7 @@ function DashboardFallback() {
 }
 
 export default function AppRoutes() {
+  const { role } = useAuth();
   const standardRoutes = routeItems.filter((item) => !item.adminOnly);
   const adminRoutes = routeItems.filter((item) => item.adminOnly);
 
@@ -45,14 +48,18 @@ export default function AppRoutes() {
                 : item.path === '/programs'
                   ? <ProgramsPage />
                   : item.path === '/staff'
-                    ? <StaffPage />
+                    ? role === 'admin' || role === 'user' || role === 'viewer' ? <StaffPage /> : <Navigate to="/dashboard" replace />
                     : item.path === '/attendance'
                       ? <AttendancePage />
                     : item.path === '/contributions'
                       ? <ContributionsPage />
                     : item.path === '/announcements'
                       ? <AnnouncementsPage />
-                  : <PlaceholderPage title={item.label} description={item.description} />}
+                        : item.path === '/imports'
+                          ? <ProtectedRoute allowedRoles={['admin', 'user']}><ImportsPage /></ProtectedRoute>
+                        : item.path === '/field-builder'
+                          ? <ProtectedRoute allowedRoles={['admin', 'user']}><FieldBuilderPage /></ProtectedRoute>
+                      : <PlaceholderPage title={item.label} description={item.description} />}
             />
           ))}
           <Route element={<ProtectedRoute requiredRole="admin" />}>
@@ -62,6 +69,8 @@ export default function AppRoutes() {
                 path={item.path.replace(/^\//, '')}
                 element={item.path === '/users'
                   ? <UsersPage />
+                  : item.path === '/group-leaders'
+                    ? <GroupLeadersPage />
                   : item.path === '/imports'
                     ? <ImportsPage />
                     : item.path === '/field-builder'
@@ -70,8 +79,10 @@ export default function AppRoutes() {
               />
             ))}
           </Route>
-          <Route path="contacts/new" element={<MemberFormPage />} />
-          <Route path="contacts/:id/edit" element={<MemberFormPage />} />
+          <Route element={<ProtectedRoute allowedRoles={['admin', 'user']} />}>
+            <Route path="contacts/new" element={<MemberFormPage />} />
+            <Route path="contacts/:id/edit" element={<MemberFormPage />} />
+          </Route>
           <Route path="contacts/:id" element={<MemberDetailPage />} />
           <Route path="programs/:id" element={<ProgramDetailPage />} />
           <Route path="*" element={<PlaceholderPage title="Page not found" description="The page you requested could not be found." />} />
