@@ -14,7 +14,6 @@ import AnnouncementsPage from '../pages/AnnouncementsPage';
 import AttendancePage from '../pages/AttendancePage';
 import ContributionsPage from '../pages/ContributionsPage';
 import FieldBuilderPage from '../pages/FieldBuilderPage';
-import GroupLeadersPage from '../pages/GroupLeaders';
 import { PlaceholderPage } from '../pages/PlaceholderPage';
 import ProtectedRoute from './ProtectedRoute';
 import { routeItems } from './routeItems';
@@ -69,8 +68,6 @@ export default function AppRoutes() {
                 path={item.path.replace(/^\//, '')}
                 element={item.path === '/users'
                   ? <UsersPage />
-                  : item.path === '/group-leaders'
-                    ? <GroupLeadersPage />
                   : item.path === '/imports'
                     ? <ImportsPage />
                     : item.path === '/field-builder'

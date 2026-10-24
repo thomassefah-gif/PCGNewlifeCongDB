@@ -6,7 +6,6 @@ import { routeItems } from '../../routes/routeItems';
 import { useAuth } from '../../features/auth/AuthContext';
 import { getErrorMessage } from '../../lib/errors';
 import { useToast } from '../ui/Toast';
-import { useGroupScope } from '../../hooks/useGroupScope';
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -17,13 +16,11 @@ export default function Sidebar({ mobileOpen, onNavigate }: SidebarProps) {
   const [logoUnavailable, setLogoUnavailable] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const navigate = useNavigate();
-  const { signOut } = useAuth();
-  const { role, isLeader } = useGroupScope();
+  const { signOut, role } = useAuth();
   const { showToast } = useToast();
   const visibleRoutes = routeItems.filter((item) =>
     (!item.adminOnly || role === 'admin')
-    && (!item.editorOnly || role === 'admin' || role === 'user')
-    && (!isLeader || ['/dashboard', '/contacts', '/programs', '/announcements', '/attendance'].includes(item.path)),
+    && (!item.editorOnly || role === 'admin' || role === 'user'),
   );
 
   const handleSignOut = async () => {

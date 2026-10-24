@@ -5,14 +5,12 @@ import Modal from './ui/Modal';
 import { useToast } from './ui/Toast';
 import { checkInMember, fetchCheckInMembers, fetchSessionCheckIns, removeMemberCheckIn } from '../lib/queries/attendance';
 import { getErrorMessage } from '../lib/errors';
-import { canonicalGroupName } from '../lib/groupScope';
 import type { AttendanceMember, AttendanceRecord, AttendanceSession } from '../types/attendance';
 
 interface MemberCheckInModalProps {
   session: AttendanceSession | null;
   userId: string | null;
   readOnly?: boolean;
-  allowRemoval?: boolean;
   onClose: () => void;
   onChanged?: () => void;
 }
@@ -21,19 +19,22 @@ const nameOf = (m: { first_name: string | null; surname: string | null }) =>
   `${m.surname ?? ''} ${m.first_name ?? ''}`.trim() || 'Unnamed member';
 
 const getTargetGroup = (serviceType: string): string | null => {
-  const group = canonicalGroupName(serviceType);
-  return [
-    'Children Service',
-    'Junior Youth (JY)',
-    "Young People's Guild (YPG)",
-    'Young Adults Fellowship (YAF)',
-    "Women's Fellowship",
-    "Men's Fellowship",
-  ].includes(group) ? group : null;
+  const type = serviceType.toLowerCase();
+  if (type.includes('jy') || type.includes('junior youth')) return 'jy';
+  if (type.includes('children')) return 'children';
+  if (type.includes('yaf')) return 'yaf';
+  if (type.includes('ypg')) return 'ypg';
+  if (type.includes('womens')) return 'women';
+  if (type.includes('mens')) return 'men';
+  return null; // Sunday Main Service, Bible Study and Other show all members
 };
 
 const inTargetGroup = (groups: string[] | undefined, target: string): boolean =>
-  (groups ?? []).some((group) => canonicalGroupName(group) === target);
+  (groups ?? []).some((g) => {
+    const name = g.toLowerCase();
+    // "men" is a substring of "women"
+    return name.includes(target) && !(target === 'men' && name.includes('women'));
+  });
 
 function GroupBadges({ groups }: { groups?: string[] }) {
   if (!groups || groups.length === 0) return <span className="text-[10px] italic text-slate-400">No Group</span>;
@@ -46,7 +47,7 @@ function GroupBadges({ groups }: { groups?: string[] }) {
   );
 }
 
-export default function MemberCheckInModal({ session, userId, readOnly = false, allowRemoval = !readOnly, onClose, onChanged }: MemberCheckInModalProps) {
+export default function MemberCheckInModal({ session, userId, readOnly = false, onClose, onChanged }: MemberCheckInModalProps) {
   const { showToast } = useToast();
   const [members, setMembers] = useState<AttendanceMember[]>([]);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -149,7 +150,7 @@ export default function MemberCheckInModal({ session, userId, readOnly = false, 
                     <span className="block truncate font-medium text-slate-900">{r.members ? nameOf(r.members) : 'Unknown member'}</span>
                     <GroupBadges groups={r.members?.groups} />
                   </span>
-                  {allowRemoval && (
+                  {!readOnly && (
                     <Button size="sm" variant="ghost" loading={busyId === r.id} icon={<UserMinus aria-hidden="true" size={14} />} onClick={() => void handleRemove(r)}>Remove</Button>
                   )}
                 </li>

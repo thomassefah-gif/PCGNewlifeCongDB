@@ -13,7 +13,6 @@ import { calculateAge, formatDate } from '../lib/date';
 import { getBirthdays, getDashboardMetrics, getGroupDistributionMetrics, getRecentContacts, type BirthdayMember, type DashboardDateRange, type DashboardMetrics, type GroupDistribution } from '../lib/queries/dashboard';
 import { supabase } from '../lib/supabaseClient';
 import type { Member } from '../types/member';
-import GroupScopeBanner from '../components/GroupScopeBanner';
 
 type DatePreset = 'all' | 'this-year' | 'last-year' | 'last-2' | 'last-5' | 'custom';
 type BirthdayTab = 'today' | 'upcoming';
@@ -141,7 +140,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <GroupScopeBanner />
       <header className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
         <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Church overview</p><h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Dashboard</h1><p className="mt-1 text-sm text-slate-600">New Life Congregation — Community Management Overview</p></div>
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-stone-200/80 bg-white p-2 shadow-sm">
