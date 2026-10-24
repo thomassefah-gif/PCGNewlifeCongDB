@@ -109,10 +109,11 @@ export default function GroupLeadersPage() {
         p_full_name: fullName.trim(),
         p_assigned_group: assignedGroup,
       });
-      if (rpcError) throw rpcError;
       const result = data as { success?: boolean; error?: string } | null;
-      if (result?.error) throw new Error(result.error);
-      if (result?.success !== true) throw new Error('The group leader account could not be created.');
+      if (rpcError || (result && !result.success)) {
+        throw new Error(result?.error || rpcError?.message || 'Failed to create the group leader account.');
+      }
+      if (!result?.success) throw new Error('The group leader account could not be created.');
       setSuccess(`Leader account created for ${assignedGroup}.`);
       setFullName('');
       setEmail('');
@@ -176,12 +177,14 @@ export default function GroupLeadersPage() {
     setError(null);
     setSuccess(null);
     try {
-      const { data, error: invocationError } = await supabase.functions.invoke('create-group-leader', {
-        body: { action: 'reset_password', userId: leader.id, password: resetPassword },
+      const { data, error: rpcError } = await supabase.rpc('admin_reset_group_leader_password', {
+        p_user_id: leader.id,
+        p_password: resetPassword,
       });
-      if (invocationError) throw new Error(invocationError.message || 'The password reset request failed.');
       const result = data as { success?: boolean; error?: string } | null;
-      if (result?.error) throw new Error(result.error);
+      if (rpcError || (result && !result.success)) {
+        throw new Error(result?.error || rpcError?.message || 'The password reset request failed.');
+      }
       if (result?.success !== true) throw new Error('The password reset request failed.');
       setSuccess(`Password reset for ${leader.full_name || leader.email || 'leader'}.`);
       setResettingId(null);
