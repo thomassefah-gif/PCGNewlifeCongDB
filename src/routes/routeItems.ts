@@ -31,5 +31,6 @@ export const routeItems: RouteItem[] = [
   { path: '/attendance', label: 'Attendance', description: 'Service check-in and attendance tracking.', icon: CalendarCheck },
   { path: '/field-builder', label: 'Field Builder', description: 'Custom contact fields will be managed here.', icon: Settings2, editorOnly: true },
   { path: '/users', label: 'User Management', description: 'System user administration will be available here.', icon: UserRoundCog, adminOnly: true },
+  { path: '/group-leaders', label: 'Group Leaders', description: 'Group leader account management.', icon: UsersRound, adminOnly: true },
   { path: '/imports', label: 'CSV Imports', description: 'CSV import and mapping tools will be available here.', icon: FileUp, editorOnly: true },
 ];

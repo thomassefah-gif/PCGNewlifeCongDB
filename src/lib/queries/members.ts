@@ -291,9 +291,7 @@ export async function getMemberById(id: string, includeAdminNotes = false): Prom
 
   let adminNotes: string | null = null;
   if (includeAdminNotes) {
-    const { data, error } = await supabase.rpc('get_member_admin_notes', { p_member_id: id });
-    if (error) throw new Error(error.message || String(error));
-    adminNotes = data as string | null;
+    adminNotes = await loadAdminNotes(id);
   }
 
   const [groupResult, sacramentResult, outgoingResult, incomingResult, familyResult, customValueResult] = await Promise.all([
@@ -356,8 +354,8 @@ export async function getMemberById(id: string, includeAdminNotes = false): Prom
     ...(baseMember as unknown as MemberProfile),
     admin_notes: adminNotes,
     member_groups: memberGroups,
-    generational_group: memberGroups.find((g) => g.membership_status === 'Active' && g.is_primary && g.groups?.group_type === 'generational')?.groups?.name,
-    family_group: memberGroups.find((g) => g.membership_status === 'Active' && g.groups?.group_type === 'family')?.groups?.name,
+    generational_group: memberGroups.find((g) => g.membership_status === 'Active' && g.is_primary && g.groups?.group_type === 'generational')?.groups?.name ?? (baseMember as { generational_group?: string }).generational_group,
+    family_group: memberGroups.find((g) => g.membership_status === 'Active' && g.groups?.group_type === 'family')?.groups?.name ?? (baseMember as { family_group?: string }).family_group,
     area_description: (baseMember as { residence_description?: string | null }).residence_description ?? undefined,
     member_sacraments: sacraments,
     member_relationships: relationships,
@@ -367,6 +365,33 @@ export async function getMemberById(id: string, includeAdminNotes = false): Prom
     family_contacts: familyContacts,
     custom_field_values: customFieldValues,
   };
+}
+
+// Prefers the RPC; silently falls back to the members table if it fails or is missing from the schema cache.
+async function loadAdminNotes(id: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_member_admin_notes', { p_member_id: id });
+    if (!error) return (data as string | null) ?? null;
+  } catch {
+    // fall through to direct read
+  }
+  try {
+    const { data } = await supabase.from('members').select('admin_notes').eq('id', id).maybeSingle();
+    return (data?.admin_notes as string | null | undefined) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveAdminNotes(id: string, notes: string | null): Promise<void> {
+  try {
+    const { error } = await supabase.rpc('update_member_admin_notes', { p_member_id: id, p_notes: notes });
+    if (!error) return;
+  } catch {
+    // fall through to direct update
+  }
+  const { error } = await supabase.from('members').update({ admin_notes: notes }).eq('id', id);
+  if (error) throw error;
 }
 
 export async function createMember(input: MemberFormInput): Promise<string> {
@@ -401,8 +426,7 @@ export async function updateMember(
   if (!('first_name' in input)) {
     const { admin_notes, ...memberFields } = input;
     if (admin_notes !== undefined) {
-      const { error } = await supabase.rpc('set_member_admin_notes', { p_member_id: id, p_notes: admin_notes });
-      if (error) throw error;
+      await saveAdminNotes(id, admin_notes);
     }
     if (Object.keys(memberFields).length > 0) {
       const { error } = await supabase.from('members').update(memberFields).eq('id', id);

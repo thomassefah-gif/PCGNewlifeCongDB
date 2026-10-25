@@ -227,21 +227,21 @@ export default function MemberDetailPage() {
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
             <h2 className="font-semibold text-primaryDark">Emergency Contact</h2>
             <InfoGrid items={[
-              ['Emergency Contact Name', member.emergency_contact_name],
-              ['Emergency Contact Phone', member.emergency_contact_phone],
+              ['Emergency Contact Name', member.emergency_contact_name || member.emergency_name],
+                            ['Emergency Contact Phone', member.emergency_contact_phone || member.emergency_phone],
             ]} />
           </div>
           <div><h2 className="mb-2 font-semibold text-slate-900">Origin &amp; Residence</h2><InfoGrid items={[
             ['Home Town', member.home_town], ['Place of Birth', member.place_of_birth], ['Nationality', member.nationality],
-            ['Residence Area', member.residence_area], ['Area Description', member.area_description], ['House Number', member.house_number],
+            ['Residence Area', member.residence_area || member.residential_area || member.current_place_of_residence], ['Area Description', member.area_description || member.landmark], ['House Number', member.house_number],
             ['Street Name', member.street_name], ['Postal Address', member.postal_address], ['Mobile Phone', member.mobile_phone], ['Other Phone Number', member.residential_phone || '—'],
             ['Email', member.email], ['Location Status', member.is_distant_member ? 'Distant Member' : 'Resident Member'],
           ]} /></div>
           <div><h2 className="mb-2 font-semibold text-slate-900">Church Membership</h2><InfoGrid items={[
             ['Member Status', member.status], ['Date Joined New Life', formatDate(member.date_joined_new_life)], ['New Life Date Estimated', member.date_joined_new_life_is_estimated ? 'Yes' : 'No'],
             ['Date Joined PCG', formatDate(member.date_joined_pcg)],
-            ['Primary Generational Group', member.generational_group],
-            ['Family Group', member.family_group],
+            ['Primary Generational Group', member.primary_generational_group || member.generational_group],
+                        ['Family Group', member.family_group || member.church_family_group || member.family],
           ]} /></div>
         </div>}
 

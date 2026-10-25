@@ -9,6 +9,7 @@ import ProgramsPage from '../pages/ProgramsPage';
 import ProgramDetailPage from '../pages/ProgramDetailPage';
 import StaffPage from '../pages/StaffPage';
 import UsersPage from '../pages/UsersPage';
+import GroupLeadersPage from '../pages/GroupLeadersPage';
 import ImportsPage from '../pages/ImportsPage';
 import AnnouncementsPage from '../pages/AnnouncementsPage';
 import AttendancePage from '../pages/AttendancePage';
@@ -68,6 +69,8 @@ export default function AppRoutes() {
                 path={item.path.replace(/^\//, '')}
                 element={item.path === '/users'
                   ? <UsersPage />
+                  : item.path === '/group-leaders'
+                    ? <GroupLeadersPage />
                   : item.path === '/imports'
                     ? <ImportsPage />
                     : item.path === '/field-builder'

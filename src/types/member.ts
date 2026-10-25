@@ -38,6 +38,13 @@ export interface Member {
   place_of_birth: string | null;
   nationality: string | null;
   residence_area: string | null;
+  residential_area?: string | null;
+  area_description?: string | null;
+  current_place_of_residence?: string | null;
+  landmark?: string | null;
+  family?: string | null;
+  emergency_name?: string | null;
+  emergency_phone?: string | null;
   residence_description: string | null;
   house_number: string | null;
   street_name: string | null;
