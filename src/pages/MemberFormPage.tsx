@@ -9,6 +9,7 @@ import { useToast } from '../components/ui/Toast';
 import { supabase } from '../lib/supabaseClient';
 import { getCustomFields, getMemberCustomFieldValues, upsertMemberCustomFieldValues, type CustomField } from '../lib/queries/customFields';
 import { createMember, getAllGroups, getMemberById, searchMembers, updateMember } from '../lib/queries/members';
+import { getAreaDescription, getPrimaryGenerationalGroup, getResidenceArea } from '../lib/memberFields';
 import type { Group, Member, MemberFormInput, MemberProfile } from '../types/member';
 
 const requiredChoice = <T extends string>(values: readonly T[], message: string) =>
@@ -113,7 +114,7 @@ function profileToForm(member: MemberProfile): MemberFormInput {
     profession: text(member.profession), occupation: text(member.occupation),
     special_interests: text(member.special_interests), home_town: text(member.home_town),
     place_of_birth: text(member.place_of_birth), nationality: text(member.nationality),
-    residence_area: text(member.residence_area), residence_description: text(member.residence_description),
+    residence_area: getResidenceArea(member), residence_description: getAreaDescription(member),
     house_number: text(member.house_number), street_name: text(member.street_name), postal_address: text(member.postal_address),
     mobile_phone: text(member.mobile_phone), residential_phone: text(member.residential_phone),
     emergency_contact_name: text(member.emergency_contact_name), emergency_contact_phone: text(member.emergency_contact_phone), email: text(member.email),
@@ -124,7 +125,7 @@ function profileToForm(member: MemberProfile): MemberFormInput {
     date_joined_new_life_is_estimated: member.date_joined_new_life_is_estimated,
     date_joined_pcg_is_estimated: member.date_joined_pcg_is_estimated,
     primary_group_id: primaryMembership?.group_id ?? '',
-    primary_group_name: primaryMembership?.groups?.name ?? '',
+    primary_group_name: primaryMembership?.groups?.name ?? getPrimaryGenerationalGroup(member),
     family_group_id: familyMembership?.group_id ?? '',
     interest_group_ids: activeGroups.filter((membership) => membership.groups?.group_type === 'interest').map((membership) => membership.group_id),
     parent_member_id: parent?.related_member_id ?? '',

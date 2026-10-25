@@ -8,6 +8,7 @@ import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../features/auth/AuthContext';
 import { calculateAge, formatDate } from '../lib/date';
 import { addMemberToGroup, getAllGroups, getMemberById, removeMemberFromGroup, updateMember } from '../lib/queries/members';
+import { getAreaDescription, getFamilyGroup, getPrimaryGenerationalGroup, getResidenceArea } from '../lib/memberFields';
 import { getCustomFields, getMemberCustomFieldValues, upsertMemberCustomFieldValues, type CustomField } from '../lib/queries/customFields';
 import { exportToCSV } from '../lib/csv';
 import type { Group, MemberProfile } from '../types/member';
@@ -233,15 +234,15 @@ export default function MemberDetailPage() {
           </div>
           <div><h2 className="mb-2 font-semibold text-slate-900">Origin &amp; Residence</h2><InfoGrid items={[
             ['Home Town', member.home_town], ['Place of Birth', member.place_of_birth], ['Nationality', member.nationality],
-            ['Residence Area', member.residence_area || member.residential_area || member.current_place_of_residence], ['Area Description', member.area_description || member.landmark], ['House Number', member.house_number],
+            ['Residence Area', getResidenceArea(member)], ['Area Description', getAreaDescription(member)], ['House Number', member.house_number],
             ['Street Name', member.street_name], ['Postal Address', member.postal_address], ['Mobile Phone', member.mobile_phone], ['Other Phone Number', member.residential_phone || '—'],
             ['Email', member.email], ['Location Status', member.is_distant_member ? 'Distant Member' : 'Resident Member'],
           ]} /></div>
           <div><h2 className="mb-2 font-semibold text-slate-900">Church Membership</h2><InfoGrid items={[
             ['Member Status', member.status], ['Date Joined New Life', formatDate(member.date_joined_new_life)], ['New Life Date Estimated', member.date_joined_new_life_is_estimated ? 'Yes' : 'No'],
             ['Date Joined PCG', formatDate(member.date_joined_pcg)],
-            ['Primary Generational Group', member.primary_generational_group || member.generational_group],
-                        ['Family Group', member.family_group || member.church_family_group || member.family],
+            ['Primary Generational Group', getPrimaryGenerationalGroup(member)],
+                        ['Family Group', getFamilyGroup(member)],
           ]} /></div>
         </div>}
 

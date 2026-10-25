@@ -18,13 +18,16 @@ export interface Member {
   church_family_group?: string | null;
   phone?: string | null;
   other_phone?: string | null;
-  member_code: string | null;
+  member_code?: string | null;
+  membership_id?: string | null;
+  member_status?: string | null;
+  gender?: string | null;
   title: string | null;
   title_other: string | null;
   surname: string | null;
   first_name: string | null;
   maiden_name?: string | null;
-  sex: Sex | null;
+  sex?: Sex | null;
   date_of_birth: string | null;
   date_of_birth_is_estimated: boolean;
   communicant_status: CommunicantStatus | null;
@@ -37,7 +40,7 @@ export interface Member {
   home_town: string | null;
   place_of_birth: string | null;
   nationality: string | null;
-  residence_area: string | null;
+  residence_area?: string | null;
   residential_area?: string | null;
   area_description?: string | null;
   current_place_of_residence?: string | null;
@@ -51,10 +54,10 @@ export interface Member {
   postal_address: string | null;
   residential_phone: string | null;
   mobile_phone: string | null;
-  emergency_contact_name: string | null;
-  emergency_contact_phone: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
   photo_url: string | null;
-  admin_notes: string | null;
+  admin_notes?: string | null;
   email: string | null;
   status: MemberStatus;
   is_distant_member: boolean;
@@ -66,6 +69,9 @@ export interface Member {
   updated_at?: string;
   created_by?: string | null;
   updated_by?: string | null;
+  // Raw Google Form properties
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
 }
 
 export interface Group {

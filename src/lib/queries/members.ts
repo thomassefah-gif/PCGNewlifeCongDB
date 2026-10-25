@@ -138,6 +138,53 @@ function toMemberPayload(input: MemberFormInput) {
   } satisfies Partial<Record<(typeof memberPayloadColumns)[number], unknown>>;
 }
 
+async function buildAliasPayload(input: MemberFormInput): Promise<Record<string, string | null>> {
+  const nullable = (value: string | null | undefined) => value?.trim() || null;
+  let familyName: string | null = null;
+  if (input.family_group_id) {
+    const { data } = await supabase.from('groups').select('name').eq('id', input.family_group_id).maybeSingle();
+    familyName = (data?.name as string | undefined) ?? null;
+  }
+  const area = nullable(input.residence_area);
+  const description = nullable(input.residence_description);
+  const generational = nullable(input.primary_group_name);
+  const emergencyName = nullable(input.emergency_contact_name);
+  const emergencyPhone = nullable(input.emergency_contact_phone);
+  const sex = input.sex || null;
+  return {
+    residential_area: area,
+    current_place_of_residence: area,
+    area_description: description,
+    landmark: description,
+    primary_generational_group: generational,
+    generational_group: generational,
+    family_group: familyName,
+    church_family_group: familyName,
+    family: familyName,
+    emergency_name: emergencyName,
+    emergency_phone: emergencyPhone,
+    gender: sex,
+  };
+}
+
+// Alias columns may not exist in every deployment; drop any the schema rejects and retry.
+async function writeWithAliases<T>(
+  base: Record<string, unknown>,
+  aliases: Record<string, unknown>,
+  run: (payload: Record<string, unknown>) => PromiseLike<{ data: T | null; error: { code?: string; message?: string } | null }>,
+): Promise<T | null> {
+  const payload: Record<string, unknown> = { ...base, ...aliases };
+  for (let attempt = 0; attempt <= Object.keys(aliases).length; attempt += 1) {
+    const { data, error } = await run(payload);
+    if (!error) return data;
+    const missing = /'([a-z_]+)' column|column "?(?:members\.)?([a-z_]+)"? (?:of relation "members" )?does not exist/i.exec(error.message ?? '');
+    const column = missing?.[1] ?? missing?.[2];
+    if (!column || !(column in aliases) || !(column in payload)) throw error;
+    delete payload[column];
+  }
+  throw new Error('Unable to save member.');
+}
+
 function selectedGroupIds(input: MemberFormInput): string[] {
   return [...new Set([
     input.primary_group_id,
@@ -395,9 +442,13 @@ async function saveAdminNotes(id: string, notes: string | null): Promise<void> {
 }
 
 export async function createMember(input: MemberFormInput): Promise<string> {
-  const { data, error } = await supabase.from('members').insert(toMemberPayload(input)).select('id').single();
-  if (error) throw error;
-  const memberId = data.id as string;
+  const aliases = await buildAliasPayload(input);
+  const created = await writeWithAliases<{ id: string }>(
+    toMemberPayload(input),
+    aliases,
+    (payload) => supabase.from('members').insert(payload).select('id').single(),
+  );
+  const memberId = created?.id as string;
 
   try {
     await syncMemberGroups(memberId, selectedGroupIds(input), input.primary_group_id);
@@ -434,9 +485,12 @@ export async function updateMember(
     }
     return;
   }
-  const { error } = await supabase.from('members').update(toMemberPayload(input)).eq('id', id);
-  if (error) throw error;
-
+  const aliases = await buildAliasPayload(input);
+  await writeWithAliases<null>(
+    toMemberPayload(input),
+    aliases,
+    (payload) => supabase.from('members').update(payload).eq('id', id).then((result) => ({ data: null, error: result.error })),
+  );
   await syncMemberGroups(id, selectedGroupIds(input), input.primary_group_id);
   await syncMemberSacraments(id, input);
   await syncParentRelationship(id, input);
