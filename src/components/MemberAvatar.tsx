@@ -23,6 +23,8 @@ function extensionFor(blobType: string, url: string): string {
 
 function PhotoLightbox({ src, alt, name, onClose }: { src: string; alt: string; name: string; onClose: () => void }) {
   const [downloading, setDownloading] = useState(false);
+  // Google's image host serves a small default size; ask for a larger one for the enlarged view.
+  const large = /^https:\/\/lh3\.googleusercontent\.com\/d\/[\w-]+$/.test(src) ? `${src}=w1200` : src;
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
@@ -33,7 +35,7 @@ function PhotoLightbox({ src, alt, name, onClose }: { src: string; alt: string; 
   const download = async () => {
     setDownloading(true);
     try {
-      const response = await fetch(src);
+      const response = await fetch(large);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
@@ -54,7 +56,7 @@ function PhotoLightbox({ src, alt, name, onClose }: { src: string; alt: string; 
 
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label={alt || 'Member photo'} className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-primaryDark/80 p-4 backdrop-blur-sm" onClick={onClose}>
-      <img src={src} alt={alt} onClick={(event) => event.stopPropagation()} className="max-h-[78vh] max-w-full rounded-2xl bg-white object-contain shadow-2xl" />
+      <img src={large} alt={alt} onError={(event) => { if (event.currentTarget.src !== src) event.currentTarget.src = src; }} onClick={(event) => event.stopPropagation()} className="h-[min(78vh,640px)] w-[min(92vw,640px)] rounded-2xl bg-white object-contain shadow-2xl" />
       <div className="flex gap-3" onClick={(event) => event.stopPropagation()}>
         <button type="button" onClick={() => void download()} disabled={downloading} className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow hover:bg-primaryDark disabled:opacity-60">
           <Download aria-hidden="true" size={16} /> {downloading ? 'Downloading…' : 'Download'}
