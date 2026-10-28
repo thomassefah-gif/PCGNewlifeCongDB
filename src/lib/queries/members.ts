@@ -3,6 +3,17 @@ import type { Group, Member, MemberFilters, MemberFormInput, MemberProfile, Memb
 
 const memberColumns = 'id,member_code,title,surname,first_name,maiden_name,marriage_type,spouse_name,spouse_phone,spouse_postal_address,children_names,children_contacts,sex,date_of_birth,mobile_phone,phone,other_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at,primary_generational_group,generational_group,family_group,church_family_group,photo_url';
 
+// Columns added outside the migrations (Google Form feed). Requested in the fallback so aliases still load
+// when column-level grants reject '*'; a further fallback drops them if they are not readable either.
+const aliasReadColumns = 'area_description,landmark,landmark_or_nearby_location,other_phone,other_phone_number,secondary_phone,phone_secondary,phone_number,phone_primary,membership_id,residential_area,current_place_of_residence,family,emergency_name,emergency_phone,gender,last_name,hometown,address,spouse_contact,parent_guardian_name,relationship_type,interest_groups,baptism_date,baptised_by,baptized_by,confirmation_date,local_congregation,district,presbytery,memory_verse,passport_picture,member_status,location_status';
+
+async function selectWithFallbacks<T extends { error: unknown }>(run: (columns: string) => PromiseLike<T>, base: string): Promise<T> {
+  let result = await run('*');
+  if (result.error) result = await run(`${base},${aliasReadColumns}`);
+  if (result.error) result = await run(base);
+  return result;
+}
+
 // Prefer select('*') so every deployed column (including photo_url/passport_picture and Google Form aliases)
 // loads; fall back to explicit columns if column-level grants reject '*'.
 function stripAdminNotes<T extends Record<string, unknown>>(row: T): T {
@@ -45,8 +56,7 @@ export async function getMembers(filters: MemberFilters = {}): Promise<{ members
   };
 
   try {
-    let result = await buildQuery('*');
-    if (result.error) result = await buildQuery(memberColumns);
+    const result = await selectWithFallbacks(buildQuery, memberColumns);
     const { data, error, count } = result;
     if (error) throw new Error(error.message || error.details || String(error));
 
@@ -76,8 +86,7 @@ export async function getAllMembers(): Promise<Member[]> {
       .order('surname', { ascending: true })
       .order('first_name', { ascending: true })
       .range(start, start + pageSize - 1);
-    let page = await buildPage('*');
-    if (page.error) page = await buildPage(memberColumns);
+    const page = await selectWithFallbacks(buildPage, memberColumns);
     const { data, error } = page;
     if (error) throw error;
     const rows = ((data ?? []) as unknown as Member[]).map((row) => stripAdminNotes(row as unknown as Record<string, unknown>) as unknown as Member);
@@ -346,8 +355,7 @@ export async function getMemberById(id: string, includeAdminNotes = false): Prom
   // Fetch the member separately: nested PostgREST joins are not required to get
   // the profile shell and can otherwise make the whole profile unavailable.
   const fetchBase = (columns: string) => supabase.from('members').select(columns).eq('id', id).maybeSingle();
-  let baseResult = await fetchBase('*');
-  if (baseResult.error) baseResult = await fetchBase(memberColumns);
+  const baseResult = await selectWithFallbacks(fetchBase, memberColumns);
   const { data: rawBaseMember, error: memberError } = baseResult;
   const baseMember = rawBaseMember ? stripAdminNotes(rawBaseMember as unknown as Record<string, unknown>) : rawBaseMember;
   if (memberError) {
@@ -423,7 +431,7 @@ export async function getMemberById(id: string, includeAdminNotes = false): Prom
     member_groups: memberGroups,
     generational_group: memberGroups.find((g) => g.membership_status === 'Active' && g.is_primary && g.groups?.group_type === 'generational')?.groups?.name ?? (baseMember as { generational_group?: string }).generational_group,
     family_group: memberGroups.find((g) => g.membership_status === 'Active' && g.groups?.group_type === 'family')?.groups?.name ?? (baseMember as { family_group?: string }).family_group,
-    area_description: (baseMember as { residence_description?: string | null }).residence_description ?? undefined,
+    area_description: (baseMember as { area_description?: string | null }).area_description || (baseMember as { residence_description?: string | null }).residence_description || undefined,
     member_sacraments: sacraments,
     member_relationships: relationships,
     member_family_contacts: familyContacts,

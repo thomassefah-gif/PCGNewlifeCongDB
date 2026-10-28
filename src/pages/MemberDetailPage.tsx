@@ -201,7 +201,8 @@ export default function MemberDetailPage() {
     Confirmation_Date: member_sacraments?.confirmation_date ?? '',
   }))(member);
 
-  const generationalGroup = member.member_groups.find((item) => item.membership_status === 'Active' && item.groups?.group_type === 'generational')?.groups?.name ?? null;
+  const generationalGroup = member.member_groups.find((item) => item.membership_status === 'Active' && item.groups?.group_type === 'generational')?.groups?.name || getPrimaryGenerationalGroup(member) || null;
+  const interestGroups = firstText(member, ['interest_groups', 'Interest Groups']);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -265,6 +266,7 @@ export default function MemberDetailPage() {
             ['Date Joined PCG', formatDate(firstText(member, ['date_joined_pcg', 'Date Joined PCG']))],
             ['Primary generational group', getPrimaryGenerationalGroup(member)],
             ['Family Group', getFamilyGroup(member)],
+            ['Interest Groups', interestGroups],
           ]} /></div>
         </div>}
 

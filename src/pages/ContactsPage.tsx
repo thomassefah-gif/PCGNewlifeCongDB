@@ -10,6 +10,7 @@ import MemberAvatar from '../components/MemberAvatar';
 import { useToast } from '../components/ui/Toast';
 import { calculateAge, formatDate } from '../lib/date';
 import { syncToGoogleSheet } from '../lib/googleSheetSync';
+import { getMobilePhone, getOtherPhone } from '../lib/memberFields';
 import { deleteMember, getAllGroups, getAllMembers, getMembers } from '../lib/queries/members';
 import { exportToCSV } from '../lib/csv';
 import { supabase } from '../lib/supabaseClient';
@@ -283,7 +284,7 @@ export default function ContactsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">{member.mobile_phone || member.residential_phone || '—'}</td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">{getMobilePhone(member) || getOtherPhone(member) || '—'}</td>
                     <td className="px-4 py-4 text-sm text-slate-600">{member.sex || '—'}</td>
                     <td className="px-4 py-4 text-sm text-slate-600">{calculateAge(member.date_of_birth) ?? '—'}</td>
                     <td className="px-4 py-4"><Badge variant={member.status === 'Active' ? 'active' : 'inactive'}>{member.status}</Badge></td>

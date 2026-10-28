@@ -9,7 +9,7 @@ import { useToast } from '../components/ui/Toast';
 import { supabase } from '../lib/supabaseClient';
 import { getCustomFields, getMemberCustomFieldValues, upsertMemberCustomFieldValues, type CustomField } from '../lib/queries/customFields';
 import { createMember, getAllGroups, getMemberById, searchMembers, updateMember } from '../lib/queries/members';
-import { firstBool, firstText, getMemberLandmark, getMemberPhotoUrl, getMembershipId, getMobilePhone, getOtherPhone, getPrimaryGenerationalGroup, getResidenceArea, getSacramentValue, type SacramentKey } from '../lib/memberFields';
+import { firstBool, firstText, getFamilyGroup, getMemberLandmark, getMemberPhotoUrl, getMembershipId, getMobilePhone, getOtherPhone, getPrimaryGenerationalGroup, getResidenceArea, getSacramentValue, type SacramentKey } from '../lib/memberFields';
 import MemberAvatar from '../components/MemberAvatar';
 import { syncToGoogleSheet } from '../lib/googleSheetSync';
 import type { Group, Member, MemberFormInput, MemberProfile } from '../types/member';
@@ -206,7 +206,24 @@ export default function MemberFormPage() {
         setCustomFields(memberFields);
         if (member) {
           originalMemberRef.current = member;
-          reset(profileToForm(member));
+          const formValues = profileToForm(member);
+          // Sheet-imported members only have group names as text, so match them to real groups.
+          const byName = (type: Group['group_type'], name: string) => name
+            ? availableGroups.find((group) => group.group_type === type && group.name.trim().toLowerCase() === name.trim().toLowerCase())
+            : undefined;
+          if (!formValues.primary_group_id) {
+            const match = byName('generational', getPrimaryGenerationalGroup(member));
+            if (match) { formValues.primary_group_id = match.id; formValues.primary_group_name = match.name; }
+          }
+          if (!formValues.family_group_id) {
+            const match = byName('family', getFamilyGroup(member));
+            if (match) formValues.family_group_id = match.id;
+          }
+          if (formValues.interest_group_ids.length === 0) {
+            const names = firstText(member, ['interest_groups']).split(/[,;]/).map((name) => name.trim().toLowerCase()).filter(Boolean);
+            formValues.interest_group_ids = availableGroups.filter((group) => group.group_type === 'interest' && names.includes(group.name.trim().toLowerCase())).map((group) => group.id);
+          }
+          reset(formValues);
           const savedValues = await getMemberCustomFieldValues(member.id);
           if (!mounted) return;
           setCustomValues(Object.fromEntries(savedValues.flatMap((saved) => saved.custom_fields?.field_key ? [[saved.custom_fields.field_key, saved.value]] : [])));
