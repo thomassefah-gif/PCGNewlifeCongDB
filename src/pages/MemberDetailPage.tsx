@@ -203,6 +203,14 @@ export default function MemberDetailPage() {
 
   const generationalGroup = member.member_groups.find((item) => item.membership_status === 'Active' && item.groups?.group_type === 'generational')?.groups?.name || getPrimaryGenerationalGroup(member) || null;
   const interestGroups = firstText(member, ['interest_groups', 'Interest Groups']);
+  // Members imported from the Google Form only have group names as text; show those alongside real memberships.
+  const linkedGroupNames = new Set(member.member_groups.map((item) => item.groups?.name?.trim().toLowerCase()).filter(Boolean));
+  const isRealGroup = (name: string) => !/^no (family group|group membership)$/i.test(name.trim());
+  const textGroups: Array<{ name: string; type: string }> = [
+    { name: getPrimaryGenerationalGroup(member), type: 'generational' },
+    { name: getFamilyGroup(member), type: 'family' },
+    ...interestGroups.split(/[,;]/).map((name) => ({ name: name.trim(), type: 'interest' })),
+  ].filter((item) => item.name && isRealGroup(item.name) && !linkedGroupNames.has(item.name.toLowerCase()));
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -213,7 +221,7 @@ export default function MemberDetailPage() {
       <section className="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm sm:p-7">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
           <div className="flex min-w-0 flex-1 items-center gap-4">
-            <MemberAvatar member={member} alt={`${memberName(member)} profile`} className="h-16 w-16 rounded-2xl text-lg sm:h-20 sm:w-20 sm:text-xl" />
+            <MemberAvatar member={member} enlargeable alt={`${memberName(member)} profile`} className="h-16 w-16 rounded-2xl text-lg sm:h-20 sm:w-20 sm:text-xl" />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{memberName(member)}</h1>
@@ -280,10 +288,14 @@ export default function MemberDetailPage() {
               <Button type="button" icon={<Plus aria-hidden="true" size={16} />} disabled={!groupToAdd} loading={savingGroup} onClick={() => void handleAddGroup()}>Add</Button>
             </div>
           </div>
-          {member.member_groups.length === 0 ? <EmptyState title="No groups assigned" description="Add this member to a church group using the selector above." /> : <div className="divide-y divide-stone-100 rounded-xl border border-stone-200">
+          {member.member_groups.length === 0 && textGroups.length === 0 ? <EmptyState title="No groups assigned" description="Add this member to a church group using the selector above." /> : <div className="divide-y divide-stone-100 rounded-xl border border-stone-200">
             {member.member_groups.map((membership) => <div key={membership.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
               <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><UserRound aria-hidden="true" size={17} /></span><div><p className="text-sm font-semibold text-slate-800">{membership.groups?.name ?? 'Unknown group'}</p><p className="mt-0.5 text-xs capitalize text-slate-500">{membership.groups?.group_type ?? 'Group'}{membership.is_primary ? ' · Primary' : ''}</p></div></div>
               <div className="flex items-center gap-3"><Badge variant={membership.membership_status === 'Active' ? 'active' : 'inactive'}>{membership.membership_status}</Badge><button type="button" aria-label={`Remove ${membership.groups?.name ?? 'group'} membership`} onClick={() => void handleRemoveGroup(membership.group_id)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-danger/10 hover:text-danger"><Trash2 aria-hidden="true" size={16} /></button></div>
+            </div>)}
+            {textGroups.map((item) => <div key={`${item.type}-${item.name}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><UserRound aria-hidden="true" size={17} /></span><div><p className="text-sm font-semibold text-slate-800">{item.name}</p><p className="mt-0.5 text-xs capitalize text-slate-500">{item.type}{item.type === 'generational' ? ' · Primary' : ''}</p></div></div>
+              <Badge variant="gray">From registration form</Badge>
             </div>)}
           </div>}
         </div>}

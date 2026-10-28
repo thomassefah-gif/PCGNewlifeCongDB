@@ -397,7 +397,7 @@ export default function MemberFormPage() {
       </header>
 
       <section className="flex flex-col gap-4 rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-6">
-        <MemberAvatar url={photoUrl} alt="Member profile" className="h-20 w-20 rounded-2xl" fallback={<div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary"><ImagePlus aria-hidden="true" size={28} /></div>} />
+        <MemberAvatar url={photoUrl} enlargeable alt="Member profile" className="h-20 w-20 rounded-2xl" fallback={<div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary"><ImagePlus aria-hidden="true" size={28} /></div>} />
         <div className="flex-1"><h2 className="font-semibold text-slate-900">Member Photo</h2><p className="mt-1 text-sm text-slate-500">Upload a profile picture (JPG, PNG, or other image, up to 5 MB).</p>{uploadingPhoto && <p className="mt-1 text-xs font-medium text-primary">Uploading photo...</p>}</div>
         <div className="flex gap-2"><input ref={photoInputRef} type="file" accept="image/*" className="sr-only" onChange={(event) => void uploadPhoto(event.target.files?.[0])} /><Button type="button" variant="outline" loading={uploadingPhoto} icon={<ImagePlus aria-hidden="true" size={16} />} onClick={() => photoInputRef.current?.click()}>Upload Photo</Button>{photoUrl && <Button type="button" variant="ghost" disabled={uploadingPhoto} onClick={() => setValue('photo_url', '', { shouldDirty: true })}>Remove</Button>}</div>
         <input type="hidden" {...register('photo_url')} />

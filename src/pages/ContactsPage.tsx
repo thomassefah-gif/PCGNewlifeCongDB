@@ -277,7 +277,7 @@ export default function ContactsPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex min-w-[205px] items-center gap-3">
-                        <MemberAvatar member={member} />
+                        <MemberAvatar member={member} enlargeable />
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-slate-900">{memberName(member)}</p>
                           <p className="truncate text-xs text-slate-500">{member.email || 'No email recorded'}</p>
