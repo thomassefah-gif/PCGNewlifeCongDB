@@ -9,6 +9,7 @@ import ExportButton from '../components/ui/ExportButton';
 import MemberAvatar from '../components/MemberAvatar';
 import { useToast } from '../components/ui/Toast';
 import { calculateAge, formatDate } from '../lib/date';
+import { syncToGoogleSheet } from '../lib/googleSheetSync';
 import { deleteMember, getAllGroups, getAllMembers, getMembers } from '../lib/queries/members';
 import { exportToCSV } from '../lib/csv';
 import { supabase } from '../lib/supabaseClient';
@@ -140,6 +141,7 @@ export default function ContactsPage() {
     setDeleting(true);
     try {
       await deleteMember(memberToDelete.id);
+      void syncToGoogleSheet('delete', memberToDelete, memberToDelete);
       setSelectedMembers((current) => {
         const next = { ...current };
         delete next[memberToDelete.id];
