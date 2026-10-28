@@ -57,6 +57,7 @@ export interface Member {
   emergency_contact_name?: string | null;
   emergency_contact_phone?: string | null;
   photo_url: string | null;
+  passport_picture?: string | null;
   admin_notes?: string | null;
   email: string | null;
   status: MemberStatus;

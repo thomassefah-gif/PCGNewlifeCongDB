@@ -8,13 +8,15 @@ import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../features/auth/AuthContext';
 import { calculateAge, formatDate } from '../lib/date';
 import { addMemberToGroup, getAllGroups, getMemberById, removeMemberFromGroup, updateMember } from '../lib/queries/members';
-import { getAreaDescription, getFamilyGroup, getPrimaryGenerationalGroup, getResidenceArea } from '../lib/memberFields';
+import { firstBool, firstText, getFamilyGroup, getMembershipId, getMobilePhone, getOtherPhone, getPrimaryGenerationalGroup, getResidenceArea, getSacramentValue, type SacramentKey } from '../lib/memberFields';
+import MemberAvatar from '../components/MemberAvatar';
 import { getCustomFields, getMemberCustomFieldValues, upsertMemberCustomFieldValues, type CustomField } from '../lib/queries/customFields';
 import { exportToCSV } from '../lib/csv';
 import type { Group, MemberProfile } from '../types/member';
 
-type ProfileTab = 'Overview' | 'Groups' | 'Family & Relationships' | 'Sacraments' | 'Custom Fields' | 'Admin Notes';
-const tabs: ProfileTab[] = ['Overview', 'Groups', 'Family & Relationships', 'Sacraments', 'Custom Fields', 'Admin Notes'];
+const SACRAMENTS_TAB = 'Sacraments & Church History';
+type ProfileTab = 'Overview' | 'Groups' | 'Family & Relationships' | typeof SACRAMENTS_TAB | 'Custom Fields' | 'Admin Notes';
+const tabs: ProfileTab[] = ['Overview', 'Groups', 'Family & Relationships', SACRAMENTS_TAB, 'Custom Fields', 'Admin Notes'];
 
 function display(value: string | null | undefined): string {
   return value?.trim() || '—';
@@ -168,8 +170,28 @@ export default function MemberDetailPage() {
   if (!member) return <EmptyState title="Member not found" description="This member record may have been removed or is not available to your account." />;
 
   const age = calculateAge(member.date_of_birth);
-  const initials = `${member.first_name?.[0] ?? ''}${member.surname?.[0] ?? ''}`.toUpperCase() || '?';
   const sacraments = member.member_sacraments;
+  const sacramentValue = (key: SacramentKey) => getSacramentValue(member, sacraments as unknown as Record<string, unknown> | null, key);
+  const areaDesc = firstText(member, [
+    'area_description', 'landmark', 'landmark_or_nearby_location',
+    'Landmark or Nearby Location', 'Landmark or Nearby Location ',
+  ]);
+  const otherPhone = firstText(member, [
+    'other_phone', 'other_phone_number', 'secondary_phone', 'residential_phone',
+    'Other Phone Number',
+  ]);
+  const distant = firstBool(member, ['is_distant_member', 'distant_member']);
+  const spouseContact = member.member_family_contacts.find((contact) => contact.relationship_type === 'spouse');
+  const parentRelationship = member.member_relationships.find((relationship) =>
+    relationship.direction === 'outgoing' && ['parent', 'guardian'].includes(relationship.relationship_type),
+  );
+  const parentGuardianName = firstText(member, ['parent_guardian_name', 'parent_name', 'Parent/Guardian Name'])
+    || (parentRelationship?.related_member
+      ? [parentRelationship.related_member.first_name, parentRelationship.related_member.surname].filter(Boolean).join(' ')
+      : '');
+  const familyRelationshipType = firstText(member, ['relationship_type', 'parent_relationship_type', 'Relationship Type'])
+    || parentRelationship?.relationship_type
+    || '';
   const exportRecord = (({ member_groups, member_relationships, member_family_contacts, member_sacraments, ...data }) => ({
     ...data,
     Groups: member_groups.map((item) => item.groups?.name).filter(Boolean).join('; '),
@@ -190,7 +212,7 @@ export default function MemberDetailPage() {
       <section className="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm sm:p-7">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
           <div className="flex min-w-0 flex-1 items-center gap-4">
-            {member.photo_url ? <img src={member.photo_url} alt={`${memberName(member)} profile`} className="h-20 w-20 shrink-0 rounded-2xl object-cover ring-1 ring-stone-200" /> : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-lg font-bold text-primaryDark sm:h-20 sm:w-20 sm:text-xl">{initials}</div>}
+            <MemberAvatar member={member} alt={`${memberName(member)} profile`} className="h-16 w-16 rounded-2xl text-lg sm:h-20 sm:w-20 sm:text-xl" />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{memberName(member)}</h1>
@@ -198,7 +220,7 @@ export default function MemberDetailPage() {
                 <Badge variant={member.is_distant_member ? 'distant' : 'primary'}>{member.is_distant_member ? 'Distant' : 'Resident'}</Badge>
                 {generationalGroup && generationalGroup !== 'No Group Membership' && <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">{generationalGroup}</span>}
               </div>
-              <p className="mt-1 text-sm text-slate-500">{member.email || 'No email recorded'} <span className="px-1">·</span> {member.mobile_phone || member.residential_phone || 'No phone recorded'}</p>
+              <p className="mt-1 text-sm text-slate-500">{member.email || 'No email recorded'} <span className="px-1">·</span> {getMobilePhone(member) || getOtherPhone(member) || 'No phone recorded'}</p>
               {member.title_other && <p className="mt-1 text-xs text-slate-500">{member.title_other}</p>}
             </div>
           </div>
@@ -220,29 +242,29 @@ export default function MemberDetailPage() {
 
         {tab === 'Overview' && <div className="space-y-7 p-5 sm:p-7">
           <div><h2 className="mb-2 font-semibold text-slate-900">Personal Information</h2><InfoGrid items={[
-            ['Title', member.title], ['First Name', member.first_name], ['Surname', member.surname], ['Maiden Name', member.maiden_name],
-            ['Sex', member.sex], ['Date of Birth', formatDate(member.date_of_birth)], ['Date of Birth Estimated', member.date_of_birth_is_estimated ? 'Yes' : 'No'],
-            ['Communicant Status', member.communicant_status], ['Marital Status', member.marital_status], ['Marriage Type', member.marriage_type],
-            ['Profession', member.profession], ['Occupation', member.occupation], ['Special Interests', member.special_interests],
+            ['Membership ID', getMembershipId(member)], ['Title', firstText(member, ['title', 'Title'])], ['First Name', firstText(member, ['first_name', 'First Name'])], ['Surname', firstText(member, ['surname', 'last_name', 'Surname', 'Last Name'])], ['Maiden Name', firstText(member, ['maiden_name', 'Maiden Name'])],
+            ['Sex', firstText(member, ['sex', 'gender', 'Sex', 'Gender'])], ['Date of Birth', formatDate(firstText(member, ['date_of_birth', 'Date of Birth']))], ['Date of Birth Estimated', firstBool(member, ['date_of_birth_is_estimated', 'is_dob_estimated']) ? 'Yes' : 'No'],
+            ['Communicant Status', firstText(member, ['communicant_status', 'Communicant Status']) || (firstBool(member, ['is_communicant']) === undefined ? '' : firstBool(member, ['is_communicant']) ? 'Communicant' : 'Non-Communicant')], ['Marital Status', firstText(member, ['marital_status', 'Marital Status'])], ['Marriage Type', firstText(member, ['marriage_type', 'Marriage Type'])],
+            ['Profession', firstText(member, ['profession', 'Profession'])], ['Occupation', firstText(member, ['occupation', 'Occupation'])], ['Special Interests', firstText(member, ['special_interests', 'Special Interests'])],
           ]} /></div>
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
             <h2 className="font-semibold text-primaryDark">Emergency Contact</h2>
             <InfoGrid items={[
-              ['Emergency Contact Name', member.emergency_contact_name || member.emergency_name],
-                            ['Emergency Contact Phone', member.emergency_contact_phone || member.emergency_phone],
+              ['Emergency Contact Name', firstText(member, ['emergency_contact_name', 'emergency_name', 'Emergency Contact Name'])],
+              ['Emergency Contact Phone', firstText(member, ['emergency_contact_phone', 'emergency_phone', 'Emergency Contact Phone'])],
             ]} />
           </div>
           <div><h2 className="mb-2 font-semibold text-slate-900">Origin &amp; Residence</h2><InfoGrid items={[
-            ['Home Town', member.home_town], ['Place of Birth', member.place_of_birth], ['Nationality', member.nationality],
-            ['Residence Area', getResidenceArea(member)], ['Area Description', getAreaDescription(member)], ['House Number', member.house_number],
-            ['Street Name', member.street_name], ['Postal Address', member.postal_address], ['Mobile Phone', member.mobile_phone], ['Other Phone Number', member.residential_phone || '—'],
-            ['Email', member.email], ['Location Status', member.is_distant_member ? 'Distant Member' : 'Resident Member'],
+            ['Home Town', firstText(member, ['home_town', 'hometown', 'Home Town'])], ['Place of Birth', firstText(member, ['place_of_birth', 'Place of Birth'])], ['Nationality', firstText(member, ['nationality', 'Nationality'])],
+            ['Residence Area', getResidenceArea(member)], ['Area Description', areaDesc || '—'], ['House Number', firstText(member, ['house_number', 'House Number'])],
+            ['Street Name', firstText(member, ['street_name', 'Street Name'])], ['Postal Address', firstText(member, ['postal_address', 'address', 'Postal Address'])], ['Mobile Phone', getMobilePhone(member)], ['Other Phone Number', otherPhone || '—'],
+            ['Email', firstText(member, ['email', 'Email'])], ['Location Status', (distant ?? member.is_distant_member) ? 'Distant Member' : 'Resident Member'],
           ]} /></div>
           <div><h2 className="mb-2 font-semibold text-slate-900">Church Membership</h2><InfoGrid items={[
-            ['Member Status', member.status], ['Date Joined New Life', formatDate(member.date_joined_new_life)], ['New Life Date Estimated', member.date_joined_new_life_is_estimated ? 'Yes' : 'No'],
-            ['Date Joined PCG', formatDate(member.date_joined_pcg)],
-            ['Primary Generational Group', getPrimaryGenerationalGroup(member)],
-                        ['Family Group', getFamilyGroup(member)],
+            ['Member Status', firstText(member, ['status', 'member_status', 'Member Status'])], ['Date Joined New Life', formatDate(firstText(member, ['date_joined_new_life', 'date_joined_current_congregation', 'Date Joined New Life']))], ['New Life Date Estimated', firstBool(member, ['date_joined_new_life_is_estimated', 'date_joined_current_is_estimated']) ? 'Yes' : 'No'],
+            ['Date Joined PCG', formatDate(firstText(member, ['date_joined_pcg', 'Date Joined PCG']))],
+            ['Primary generational group', getPrimaryGenerationalGroup(member)],
+            ['Family Group', getFamilyGroup(member)],
           ]} /></div>
         </div>}
 
@@ -265,15 +287,17 @@ export default function MemberDetailPage() {
         </div>}
 
         {tab === 'Family & Relationships' && <div className="space-y-7 p-5 sm:p-7">
-          {(member.maiden_name || member.marriage_type || member.spouse_name || member.spouse_phone || member.spouse_postal_address || member.children_names || member.children_contacts) && <div><h2 className="mb-2 font-semibold text-slate-900">Family Details</h2><InfoGrid items={[
-            ...(member.maiden_name ? [['Maiden Name', member.maiden_name] as [string, string]] : []),
-            ...(member.marriage_type ? [['Marriage Type', member.marriage_type] as [string, string]] : []),
-            ...(member.spouse_name ? [['Spouse Name', member.spouse_name] as [string, string]] : []),
-            ...(member.spouse_phone ? [['Spouse Contact Phone', member.spouse_phone] as [string, string]] : []),
-            ...(member.spouse_postal_address ? [['Spouse Postal Address', member.spouse_postal_address] as [string, string]] : []),
-            ...(member.children_names ? [['Children Names', member.children_names] as [string, string]] : []),
-            ...(member.children_contacts ? [['Children Contacts', member.children_contacts] as [string, string]] : []),
-          ]} /></div>}
+          <div><h2 className="mb-2 font-semibold text-slate-900">Family Information</h2><InfoGrid items={[
+            ['Spouse Name', firstText(member, ['spouse_name', 'spouse_full_name', 'Spouse Name']) || spouseContact?.full_name],
+            ['Spouse Contact', firstText(member, ['spouse_contact', 'spouse_phone', 'Spouse Contact']) || spouseContact?.contact_number],
+            ['Children Names', firstText(member, ['children_names', 'Children Names'])],
+            ['Children Contacts', firstText(member, ['children_contacts', 'Children Contacts'])],
+            ['Parent/Guardian Name', parentGuardianName],
+            ['Relationship Type', familyRelationshipType],
+            ['Maiden Name', firstText(member, ['maiden_name', 'Maiden Name'])],
+            ['Marriage Type', firstText(member, ['marriage_type', 'Marriage Type'])],
+            ['Spouse Postal Address', firstText(member, ['spouse_postal_address', 'Spouse Postal Address']) || spouseContact?.postal_address],
+          ]} /></div>
           <div><h2 className="mb-3 font-semibold text-slate-900">Linked Church Members</h2>
             {member.member_relationships.length === 0 ? <p className="rounded-xl bg-stone-50 px-4 py-6 text-center text-sm text-slate-500">No church member relationships recorded.</p> : <div className="grid gap-3 md:grid-cols-2">
               {member.member_relationships.map((relationship) => <article key={`${relationship.id}-${relationship.direction}`} className="flex items-center gap-3 rounded-xl border border-stone-200 p-4">
@@ -288,11 +312,11 @@ export default function MemberDetailPage() {
           </div>
         </div>}
 
-        {tab === 'Sacraments' && <div className="p-5 sm:p-7">
-          {!sacraments ? <EmptyState title="No sacrament details" description="Baptism and confirmation information has not been recorded for this member." /> : <div className="grid gap-6 lg:grid-cols-2">
-            <article className="rounded-2xl border border-stone-200 p-5"><h2 className="font-semibold text-slate-900">Baptism</h2><InfoGrid items={[["Baptism Date", formatDate(sacraments.baptism_date)], ['Baptised By', sacraments.baptised_by]]} /></article>
-            <article className="rounded-2xl border border-stone-200 p-5"><h2 className="font-semibold text-slate-900">Confirmation</h2><InfoGrid items={[["Confirmation Date", formatDate(sacraments.confirmation_date)], ['Local Congregation', sacraments.local_congregation], ['District', sacraments.district], ['Presbytery', sacraments.presbytery], ['Memory Verse', sacraments.memory_verse]]} /></article>
-          </div>}
+        {tab === SACRAMENTS_TAB && <div className="p-5 sm:p-7">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <article className="rounded-2xl border border-stone-200 p-5"><h2 className="font-semibold text-slate-900">Baptism</h2><InfoGrid items={[['Baptism Date', formatDate(sacramentValue('baptism_date'))], ['Baptised By', sacramentValue('baptised_by')]]} /></article>
+            <article className="rounded-2xl border border-stone-200 p-5"><h2 className="font-semibold text-slate-900">Confirmation &amp; Church History</h2><InfoGrid items={[['Confirmation Date', formatDate(sacramentValue('confirmation_date'))], ['Local Congregation', sacramentValue('local_congregation')], ['District', sacramentValue('district')], ['Presbytery', sacramentValue('presbytery')], ['Memory Verse', sacramentValue('memory_verse')]]} /></article>
+          </div>
         </div>}
 
         {tab === 'Custom Fields' && <div className="space-y-5 p-5 sm:p-7">

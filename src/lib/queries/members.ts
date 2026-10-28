@@ -1,26 +1,21 @@
 import { supabase } from '../supabaseClient';
 import type { Group, Member, MemberFilters, MemberFormInput, MemberProfile, MemberRelationship } from '../../types/member';
 
-const memberColumns = 'id,member_code,title,surname,first_name,maiden_name,marriage_type,spouse_name,spouse_phone,spouse_postal_address,children_names,children_contacts,sex,date_of_birth,mobile_phone,phone,other_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at,primary_generational_group,generational_group,family_group,church_family_group';
+const memberColumns = 'id,member_code,title,surname,first_name,maiden_name,marriage_type,spouse_name,spouse_phone,spouse_postal_address,children_names,children_contacts,sex,date_of_birth,mobile_phone,phone,other_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at,primary_generational_group,generational_group,family_group,church_family_group,photo_url';
+
+// Prefer select('*') so every deployed column (including photo_url/passport_picture and Google Form aliases)
+// loads; fall back to explicit columns if column-level grants reject '*'.
+function stripAdminNotes<T extends Record<string, unknown>>(row: T): T {
+  const { admin_notes: _omitted, ...rest } = row;
+  return rest as T;
+}
 
 export async function getMembers(filters: MemberFilters = {}): Promise<{ members: Member[]; totalCount: number }> {
   const page = Math.max(1, filters.page ?? 1);
   const pageSize = Math.max(1, filters.pageSize ?? 25);
   const start = (page - 1) * pageSize;
-  let query = supabase
-    .from('members')
-    .select(`${memberColumns},member_groups(membership_status,groups(name))`, { count: 'exact' })
-    .order('surname', { ascending: true })
-    .order('first_name', { ascending: true });
 
-  if (filters.search?.trim()) {
-    const search = filters.search.trim().replace(/[(),]/g, ' ');
-    query = query.or(`first_name.ilike.%${search}%,surname.ilike.%${search}%,email.ilike.%${search}%,mobile_phone.ilike.%${search}%`);
-  }
-  if (filters.status && filters.status !== 'ALL') query = query.eq('status', filters.status);
-  if (filters.distant === 'DISTANT') query = query.eq('is_distant_member', true);
-  if (filters.distant === 'NON_DISTANT') query = query.eq('is_distant_member', false);
-
+  let groupMemberIds: string[] | null = null;
   if (filters.groupId && filters.groupId !== 'ALL') {
     const { data: memberships, error: membershipError } = await supabase
       .from('member_groups')
@@ -28,17 +23,35 @@ export async function getMembers(filters: MemberFilters = {}): Promise<{ members
       .eq('group_id', filters.groupId)
       .eq('membership_status', 'Active');
     if (membershipError) throw membershipError;
-    const memberIds = [...new Set((memberships ?? []).map((row) => row.member_id as string))];
-    if (memberIds.length === 0) return { members: [], totalCount: 0 };
-    query = query.in('id', memberIds);
+    groupMemberIds = [...new Set((memberships ?? []).map((row) => row.member_id as string))];
+    if (groupMemberIds.length === 0) return { members: [], totalCount: 0 };
   }
 
+  const buildQuery = (columns: string) => {
+    let query = supabase
+      .from('members')
+      .select(`${columns},member_groups(membership_status,groups(name))`, { count: 'exact' })
+      .order('surname', { ascending: true })
+      .order('first_name', { ascending: true });
+    if (filters.search?.trim()) {
+      const search = filters.search.trim().replace(/[(),]/g, ' ');
+      query = query.or(`first_name.ilike.%${search}%,surname.ilike.%${search}%,email.ilike.%${search}%,mobile_phone.ilike.%${search}%`);
+    }
+    if (filters.status && filters.status !== 'ALL') query = query.eq('status', filters.status);
+    if (filters.distant === 'DISTANT') query = query.eq('is_distant_member', true);
+    if (filters.distant === 'NON_DISTANT') query = query.eq('is_distant_member', false);
+    if (groupMemberIds) query = query.in('id', groupMemberIds);
+    return query.range(start, start + pageSize - 1);
+  };
+
   try {
-    const { data, error, count } = await query.range(start, start + pageSize - 1);
+    let result = await buildQuery('*');
+    if (result.error) result = await buildQuery(memberColumns);
+    const { data, error, count } = result;
     if (error) throw new Error(error.message || error.details || String(error));
 
     const rows = ((data as any[]) || []).map((row) => {
-      const { member_groups: memberGroups, ...member } = row;
+      const { member_groups: memberGroups, ...member } = stripAdminNotes(row);
       const groups = ((memberGroups as any[]) || [])
         .filter((mg) => mg?.membership_status !== 'Inactive')
         .map((mg) => mg?.groups?.name)
@@ -57,14 +70,17 @@ export async function getAllMembers(): Promise<Member[]> {
   const pageSize = 1000;
   const allMembers: Member[] = [];
   for (let start = 0; ; start += pageSize) {
-    const { data, error } = await supabase
+    const buildPage = (columns: string) => supabase
       .from('members')
-      .select(memberColumns)
+      .select(columns)
       .order('surname', { ascending: true })
       .order('first_name', { ascending: true })
       .range(start, start + pageSize - 1);
+    let page = await buildPage('*');
+    if (page.error) page = await buildPage(memberColumns);
+    const { data, error } = page;
     if (error) throw error;
-    const rows = (data ?? []) as unknown as Member[];
+    const rows = ((data ?? []) as unknown as Member[]).map((row) => stripAdminNotes(row as unknown as Record<string, unknown>) as unknown as Member);
     allMembers.push(...rows);
     if (rows.length < pageSize) return allMembers;
   }
@@ -164,6 +180,10 @@ async function buildAliasPayload(input: MemberFormInput): Promise<Record<string,
     emergency_name: emergencyName,
     emergency_phone: emergencyPhone,
     gender: sex,
+    other_phone: nullable(input.residential_phone),
+    other_phone_number: nullable(input.residential_phone),
+    phone_number: nullable(input.mobile_phone),
+    membership_id: nullable(input.member_code),
   };
 }
 
@@ -325,11 +345,11 @@ export async function getMemberById(id: string, includeAdminNotes = false): Prom
 
   // Fetch the member separately: nested PostgREST joins are not required to get
   // the profile shell and can otherwise make the whole profile unavailable.
-  const { data: baseMember, error: memberError } = await supabase
-    .from('members')
-    .select(memberColumns)
-    .eq('id', id)
-    .maybeSingle();
+  const fetchBase = (columns: string) => supabase.from('members').select(columns).eq('id', id).maybeSingle();
+  let baseResult = await fetchBase('*');
+  if (baseResult.error) baseResult = await fetchBase(memberColumns);
+  const { data: rawBaseMember, error: memberError } = baseResult;
+  const baseMember = rawBaseMember ? stripAdminNotes(rawBaseMember as unknown as Record<string, unknown>) : rawBaseMember;
   if (memberError) {
     console.error('Error fetching member:', memberError);
     throw new Error(`Member query failed: ${memberError.message}`);

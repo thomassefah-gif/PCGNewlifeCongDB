@@ -9,7 +9,8 @@ import { useToast } from '../components/ui/Toast';
 import { supabase } from '../lib/supabaseClient';
 import { getCustomFields, getMemberCustomFieldValues, upsertMemberCustomFieldValues, type CustomField } from '../lib/queries/customFields';
 import { createMember, getAllGroups, getMemberById, searchMembers, updateMember } from '../lib/queries/members';
-import { getAreaDescription, getPrimaryGenerationalGroup, getResidenceArea } from '../lib/memberFields';
+import { firstBool, firstText, getMemberLandmark, getMemberPhotoUrl, getMembershipId, getMobilePhone, getOtherPhone, getPrimaryGenerationalGroup, getResidenceArea, getSacramentValue, type SacramentKey } from '../lib/memberFields';
+import MemberAvatar from '../components/MemberAvatar';
 import type { Group, Member, MemberFormInput, MemberProfile } from '../types/member';
 
 const requiredChoice = <T extends string>(values: readonly T[], message: string) =>
@@ -99,40 +100,49 @@ function profileToForm(member: MemberProfile): MemberFormInput {
   const sacraments = member.member_sacraments;
   const parent = member.member_relationships.find((relationship) => relationship.direction === 'outgoing' && ['parent', 'guardian'].includes(relationship.relationship_type));
   const spouse = member.member_family_contacts.find((contact) => contact.relationship_type === 'spouse');
+  const t = (...keys: string[]) => firstText(member, keys);
+  const sv = (key: SacramentKey) => getSacramentValue(member, sacraments as unknown as Record<string, unknown> | null, key);
+  const sex = t('sex', 'gender', 'Sex', 'Gender');
+  const normalizedSex = /^m/i.test(sex) ? 'Male' : /^f/i.test(sex) ? 'Female' : '';
+  const status = t('status', 'member_status');
+  const dobEstimated = firstBool(member, ['date_of_birth_is_estimated', 'is_dob_estimated', 'dob_estimated', 'date_of_birth_estimated']);
+  const newLifeEstimated = firstBool(member, ['date_joined_new_life_is_estimated', 'is_joined_new_life_estimated', 'date_joined_current_is_estimated', 'date_joined_estimated']);
+  const pcgEstimated = firstBool(member, ['date_joined_pcg_is_estimated', 'is_joined_pcg_estimated']);
 
   return {
     ...defaults,
-    spouse_name: text(member.spouse_name ?? spouse?.full_name),
-    spouse_phone: text(member.spouse_phone ?? spouse?.contact_number),
+    spouse_name: t('spouse_name', 'spouse_full_name', 'Spouse Name') || spouse?.full_name || '',
+    spouse_phone: t('spouse_contact', 'spouse_phone', 'Spouse Contact') || spouse?.contact_number || '',
     spouse_postal_address: text(member.spouse_postal_address ?? spouse?.postal_address),
-    children_names: text(member.children_names), children_contacts: text(member.children_contacts),
-    member_code: text(member.member_code), title_other: text(member.title_other), surname: text(member.surname),
-    first_name: text(member.first_name), maiden_name: text(member.maiden_name), sex: member.sex ?? '',
-    date_of_birth: text(member.date_of_birth), date_of_birth_is_estimated: member.date_of_birth_is_estimated,
-    communicant_status: member.communicant_status ?? '', marital_status: member.marital_status ?? '',
-    marriage_type: member.marriage_type === 'Ordinance' ? 'Church Ordinance' : member.marriage_type ?? '',
-    profession: text(member.profession), occupation: text(member.occupation),
-    special_interests: text(member.special_interests), home_town: text(member.home_town),
-    place_of_birth: text(member.place_of_birth), nationality: text(member.nationality),
-    residence_area: getResidenceArea(member), residence_description: getAreaDescription(member),
-    house_number: text(member.house_number), street_name: text(member.street_name), postal_address: text(member.postal_address),
-    mobile_phone: text(member.mobile_phone), residential_phone: text(member.residential_phone),
-    emergency_contact_name: text(member.emergency_contact_name), emergency_contact_phone: text(member.emergency_contact_phone), email: text(member.email),
-    photo_url: text(member.photo_url),
-    status: member.status, is_distant_member: member.is_distant_member,
-    date_joined_new_life: text(member.date_joined_new_life),
+    children_names: t('children_names', 'Children Names'), children_contacts: t('children_contacts', 'Children Contacts'),
+    member_code: getMembershipId(member), title_other: text(member.title_other), surname: t('surname', 'last_name'),
+    first_name: t('first_name', 'First Name'), maiden_name: t('maiden_name', 'Maiden Name'), sex: normalizedSex,
+    date_of_birth: text(member.date_of_birth), date_of_birth_is_estimated: dobEstimated ?? false,
+    communicant_status: member.communicant_status ?? (firstBool(member, ['is_communicant']) === undefined ? '' : firstBool(member, ['is_communicant']) ? 'Communicant' : 'Non-Communicant'), marital_status: member.marital_status ?? '',
+    marriage_type: t('marriage_type', 'Marriage Type') === 'Ordinance' ? 'Church Ordinance' : t('marriage_type', 'Marriage Type'),
+    profession: t('profession', 'Profession'), occupation: t('occupation', 'Occupation'),
+    special_interests: text(member.special_interests), home_town: t('home_town', 'hometown'),
+    place_of_birth: t('place_of_birth', 'Place of Birth'), nationality: t('nationality', 'Nationality'),
+    residence_area: getResidenceArea(member), residence_description: getMemberLandmark(member),
+    house_number: t('house_number', 'House Number'), street_name: t('street_name', 'Street Name'), postal_address: t('postal_address', 'address', 'Postal Address'),
+    mobile_phone: getMobilePhone(member),
+    residential_phone: getOtherPhone(member),
+    emergency_contact_name: t('emergency_contact_name', 'emergency_name', 'Emergency Contact Name'), emergency_contact_phone: t('emergency_contact_phone', 'emergency_phone', 'Emergency Contact Phone'), email: t('email', 'Email'),
+    photo_url: getMemberPhotoUrl(member),
+    status: status === 'Inactive' ? 'Inactive' : member.status ?? 'Active', is_distant_member: member.is_distant_member ?? /distant/i.test(t('location_status')),
+    date_joined_new_life: t('date_joined_new_life', 'date_joined_current_congregation', 'date_joined'),
     date_joined_pcg: text(member.date_joined_pcg),
-    date_joined_new_life_is_estimated: member.date_joined_new_life_is_estimated,
-    date_joined_pcg_is_estimated: member.date_joined_pcg_is_estimated,
+    date_joined_new_life_is_estimated: newLifeEstimated ?? false,
+    date_joined_pcg_is_estimated: pcgEstimated ?? false,
     primary_group_id: primaryMembership?.group_id ?? '',
     primary_group_name: primaryMembership?.groups?.name ?? getPrimaryGenerationalGroup(member),
     family_group_id: familyMembership?.group_id ?? '',
     interest_group_ids: activeGroups.filter((membership) => membership.groups?.group_type === 'interest').map((membership) => membership.group_id),
     parent_member_id: parent?.related_member_id ?? '',
     parent_relationship_type: parent?.relationship_type === 'guardian' ? 'guardian' : 'parent',
-    baptism_date: text(sacraments?.baptism_date), baptised_by: text(sacraments?.baptised_by),
-    confirmation_date: text(sacraments?.confirmation_date), local_congregation: text(sacraments?.local_congregation),
-    district: text(sacraments?.district), presbytery: text(sacraments?.presbytery), memory_verse: text(sacraments?.memory_verse),
+    baptism_date: sv('baptism_date'), baptised_by: sv('baptised_by'),
+    confirmation_date: sv('confirmation_date'), local_congregation: sv('local_congregation'),
+    district: sv('district'), presbytery: sv('presbytery'), memory_verse: sv('memory_verse'),
   };
 }
 
@@ -357,7 +367,7 @@ export default function MemberFormPage() {
       </header>
 
       <section className="flex flex-col gap-4 rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-6">
-        {photoUrl ? <img src={photoUrl} alt="Member profile" className="h-20 w-20 rounded-2xl object-cover ring-1 ring-stone-200" /> : <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary"><ImagePlus aria-hidden="true" size={28} /></div>}
+        <MemberAvatar url={photoUrl} alt="Member profile" className="h-20 w-20 rounded-2xl" fallback={<div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary"><ImagePlus aria-hidden="true" size={28} /></div>} />
         <div className="flex-1"><h2 className="font-semibold text-slate-900">Member Photo</h2><p className="mt-1 text-sm text-slate-500">Upload a profile picture (JPG, PNG, or other image, up to 5 MB).</p>{uploadingPhoto && <p className="mt-1 text-xs font-medium text-primary">Uploading photo...</p>}</div>
         <div className="flex gap-2"><input ref={photoInputRef} type="file" accept="image/*" className="sr-only" onChange={(event) => void uploadPhoto(event.target.files?.[0])} /><Button type="button" variant="outline" loading={uploadingPhoto} icon={<ImagePlus aria-hidden="true" size={16} />} onClick={() => photoInputRef.current?.click()}>Upload Photo</Button>{photoUrl && <Button type="button" variant="ghost" disabled={uploadingPhoto} onClick={() => setValue('photo_url', '', { shouldDirty: true })}>Remove</Button>}</div>
         <input type="hidden" {...register('photo_url')} />
@@ -368,7 +378,7 @@ export default function MemberFormPage() {
           <h2 className="font-semibold text-slate-900">Primary Generational Group</h2>
           <p className="mt-1 text-sm text-slate-500">This selection controls which member details are shown.</p>
         </div>
-        <Field label="Generational group">
+        <Field label="Primary generational group">
           <select className={selectClass} value={primaryGroupId ?? ''} onChange={(event) => changePrimaryGroup(event.target.value)}>
             <option value="">No Group Membership</option>
             {primaryGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
@@ -464,12 +474,12 @@ export default function MemberFormPage() {
           <Field label="Place of Birth"><input className={inputClass} {...register('place_of_birth')} /></Field>
           <Field label="Nationality"><input className={inputClass} {...register('nationality')} /></Field>
           <Field label="Residence Area"><input className={inputClass} {...register('residence_area')} /></Field>
-          <Field label="Area Description"><input className={inputClass} {...register('residence_description')} /></Field>
+          <Field label="Landmark or Nearby Location"><input className={inputClass} placeholder="e.g., Near Shell Fuel Station" {...register('residence_description')} /></Field>
           <Field label="House Number"><input className={inputClass} {...register('house_number')} /></Field>
           <Field label="Street Name"><input className={inputClass} {...register('street_name')} /></Field>
           <Field label="Postal Address"><input className={inputClass} {...register('postal_address')} /></Field>
           <Field label="Mobile Phone"><input className={inputClass} inputMode="tel" autoComplete="tel" {...register('mobile_phone')} /></Field>
-          <Field label="Other Phone Number"><input className={inputClass} inputMode="tel" placeholder="e.g. 0240000000 (Optional secondary phone)" {...register('residential_phone')} /></Field>
+          <Field label="Other Phone"><input className={inputClass} inputMode="tel" placeholder="e.g. 0240000000 (Optional secondary phone)" {...register('residential_phone')} /></Field>
           <Field label="Email" error={emailError}><input type="email" className={inputClass} autoComplete="email" {...register('email')} /></Field>
           <Field label="Member Status"><select className={selectClass} {...register('status')}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></Field>
         </div>
@@ -483,7 +493,7 @@ export default function MemberFormPage() {
           <label className="flex min-h-10 items-center gap-2.5 self-end pb-2 text-sm text-slate-600"><input type="checkbox" className="h-4 w-4 rounded border-stone-300 text-primary focus:ring-primary" {...register('date_joined_new_life_is_estimated')} /> Date is estimated</label>
           <Field label="Date Joined PCG"><input type="date" className={inputClass} {...register('date_joined_pcg')} /></Field>
           <label className="flex min-h-10 items-center gap-2.5 self-end pb-2 text-sm text-slate-600"><input type="checkbox" className="h-4 w-4 rounded border-stone-300 text-primary focus:ring-primary" {...register('date_joined_pcg_is_estimated')} /> Date is estimated</label>
-          <Field label="Church Family Group"><select className={selectClass} {...register('family_group_id')}><option value="">No family group</option>{familyGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></Field>
+          <Field label="Family Group"><select className={selectClass} {...register('family_group_id')}><option value="">No family group</option>{familyGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></Field>
         </div>
         {interestGroups.length > 0 && <fieldset>
           <legend className="mb-2 text-sm font-medium text-slate-700">Interest Groups</legend>
@@ -494,7 +504,7 @@ export default function MemberFormPage() {
       </section>
 
       <section className="space-y-5 rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm sm:p-6">
-        <div><h2 className="font-semibold text-slate-900">Sacraments <span className="font-normal text-slate-400">(Optional)</span></h2><p className="mt-1 text-sm text-slate-500">Baptism and confirmation records.</p></div>
+        <div><h2 className="font-semibold text-slate-900">Sacraments &amp; Church History <span className="font-normal text-slate-400">(Optional)</span></h2><p className="mt-1 text-sm text-slate-500">Baptism and confirmation records.</p></div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Baptism Date"><input type="date" className={inputClass} {...register('baptism_date')} /></Field>
           <Field label="Baptised By"><input className={inputClass} {...register('baptised_by')} /></Field>

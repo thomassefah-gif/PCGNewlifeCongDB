@@ -6,6 +6,7 @@ import Button from '../components/ui/Button';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import EmptyState from '../components/ui/EmptyState';
 import ExportButton from '../components/ui/ExportButton';
+import MemberAvatar from '../components/MemberAvatar';
 import { useToast } from '../components/ui/Toast';
 import { calculateAge, formatDate } from '../lib/date';
 import { deleteMember, getAllGroups, getAllMembers, getMembers } from '../lib/queries/members';
@@ -273,9 +274,7 @@ export default function ContactsPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex min-w-[205px] items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primaryDark" aria-hidden="true">
-                          {member.first_name?.[0]?.toUpperCase() ?? member.surname?.[0]?.toUpperCase() ?? '?'}{member.surname?.[0]?.toUpperCase() ?? ''}
-                        </div>
+                        <MemberAvatar member={member} />
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-slate-900">{memberName(member)}</p>
                           <p className="truncate text-xs text-slate-500">{member.email || 'No email recorded'}</p>
