@@ -98,22 +98,30 @@ export async function getProgramMembers(
   search = '',
   status: GroupMembershipFilter = 'ALL',
 ): Promise<ProgramMember[]> {
-  let query = supabase
-    .from('member_groups')
-    .select('id,member_id,group_id,membership_status,is_primary,joined_at,members!inner(id,title,surname,first_name,sex,date_of_birth,mobile_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at)')
-    .eq('group_id', groupId)
-    .order('joined_at', { ascending: false });
+  const baseColumns = 'id,title,surname,first_name,sex,date_of_birth,mobile_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at';
+  type Result = { data: Array<Record<string, unknown>> | null; error: Error | null };
+  const run = async (memberColumns: string): Promise<Result> => {
+    let query = supabase
+      .from('member_groups')
+      .select(`id,member_id,group_id,membership_status,is_primary,joined_at,members!inner(${memberColumns})`)
+      .eq('group_id', groupId)
+      .order('joined_at', { ascending: false });
 
-  if (status !== 'ALL') query = query.eq('membership_status', status);
-  const term = search.trim().replace(/[(),]/g, ' ');
-  if (term) {
-    query = query.or(
-      `first_name.ilike.%${term}%,surname.ilike.%${term}%,email.ilike.%${term}%,mobile_phone.ilike.%${term}%`,
-      { referencedTable: 'members' },
-    );
-  }
+    if (status !== 'ALL') query = query.eq('membership_status', status);
+    const term = search.trim().replace(/[(),]/g, ' ');
+    if (term) {
+      query = query.or(
+        `first_name.ilike.%${term}%,surname.ilike.%${term}%,email.ilike.%${term}%,mobile_phone.ilike.%${term}%`,
+        { referencedTable: 'members' },
+      );
+    }
+    return (await query) as unknown as Result;
+  };
 
-  const { data, error } = await query;
+  // Photo columns may be missing or not granted in some databases, so retry without them.
+  let { data, error } = await run(`${baseColumns},photo_url,passport_picture`);
+  if (error) ({ data, error } = await run(`${baseColumns},photo_url`));
+  if (error) ({ data, error } = await run(baseColumns));
   if (error) throw error;
   return (data ?? []).map((row) => ({
     ...row,
