@@ -6,6 +6,7 @@ import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import EmptyState from '../components/ui/EmptyState';
 import ExportButton from '../components/ui/ExportButton';
+import MemberAvatar from '../components/MemberAvatar';
 import BarCard from '../components/charts/BarCard';
 import DonutCard from '../components/charts/DonutCard';
 import { useToast } from '../components/ui/Toast';
@@ -33,10 +34,6 @@ function currentRange(preset: Exclude<DatePreset, 'all' | 'custom'>, now = new D
 
 function nameOf(member: Member): string {
   return [member.title, member.first_name, member.surname].filter(Boolean).join(' ') || 'Unnamed member';
-}
-
-function initialsOf(member: Member): string {
-  return `${member.first_name?.[0] ?? ''}${member.surname?.[0] ?? ''}`.toUpperCase() || '?';
 }
 
 function birthdayName(member: BirthdayMember): string {
@@ -176,7 +173,7 @@ export default function DashboardPage() {
         <section className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,.75fr)]">
           <article className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-5 py-4"><div><h2 className="font-semibold text-slate-900">Recent Contacts</h2><p className="mt-0.5 text-xs text-slate-500">Latest member records added to the directory</p></div><ExportButton<Member> data={recentContacts} filename="recent_contacts" label="Export Recent (CSV)" isMemberData size="sm" /></div>
-            {loading && recentContacts.length === 0 ? <div className="animate-pulse px-5 py-12 text-center text-sm text-slate-500">Loading recent contacts...</div> : recentContacts.length === 0 ? <EmptyState title="No recent contacts" description="Recently added church members will appear here." /> : <div className="overflow-x-auto"><table className="w-full min-w-[640px] border-collapse text-left"><thead className="bg-stone-50 text-[10px] font-bold uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3">Contact</th><th className="px-3 py-3">Phone</th><th className="px-3 py-3">Age</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Date Added</th></tr></thead><tbody className="divide-y divide-stone-100">{recentContacts.map((member) => <tr key={member.id} tabIndex={0} onClick={() => navigate(`/contacts/${member.id}`)} onKeyDown={(event) => { if (event.key === 'Enter') navigate(`/contacts/${member.id}`); }} className="cursor-pointer transition-colors hover:bg-accent/50 focus:bg-accent/50"><td className="px-5 py-3"><div className="flex items-center gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primaryDark">{initialsOf(member)}</span><span className="min-w-0"><span className="block truncate text-sm font-semibold text-slate-800">{nameOf(member)}</span><span className="block truncate text-xs text-slate-500">{member.email || 'No email recorded'}</span></span></div></td><td className="whitespace-nowrap px-3 py-3 text-xs text-slate-600">{member.mobile_phone || member.residential_phone || '—'}</td><td className="px-3 py-3 text-xs text-slate-600">{calculateAge(member.date_of_birth) ?? '—'}</td><td className="px-3 py-3"><Badge variant={member.status === 'Active' ? 'active' : 'inactive'}>{member.status}</Badge></td><td className="whitespace-nowrap px-3 py-3 text-xs text-slate-600">{formatDate(member.created_at)}</td></tr>)}</tbody></table></div>}
+            {loading && recentContacts.length === 0 ? <div className="animate-pulse px-5 py-12 text-center text-sm text-slate-500">Loading recent contacts...</div> : recentContacts.length === 0 ? <EmptyState title="No recent contacts" description="Recently added church members will appear here." /> : <div className="overflow-x-auto"><table className="w-full min-w-[640px] border-collapse text-left"><thead className="bg-stone-50 text-[10px] font-bold uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3">Contact</th><th className="px-3 py-3">Phone</th><th className="px-3 py-3">Age</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Date Added</th></tr></thead><tbody className="divide-y divide-stone-100">{recentContacts.map((member) => <tr key={member.id} tabIndex={0} onClick={() => navigate(`/contacts/${member.id}`)} onKeyDown={(event) => { if (event.key === 'Enter') navigate(`/contacts/${member.id}`); }} className="cursor-pointer transition-colors hover:bg-accent/50 focus:bg-accent/50"><td className="px-5 py-3"><div className="flex items-center gap-3"><MemberAvatar member={member} className="h-8 w-8 rounded-full text-[10px]" /><span className="min-w-0"><span className="block truncate text-sm font-semibold text-slate-800">{nameOf(member)}</span><span className="block truncate text-xs text-slate-500">{member.email || 'No email recorded'}</span></span></div></td><td className="whitespace-nowrap px-3 py-3 text-xs text-slate-600">{member.mobile_phone || member.residential_phone || '—'}</td><td className="px-3 py-3 text-xs text-slate-600">{calculateAge(member.date_of_birth) ?? '—'}</td><td className="px-3 py-3"><Badge variant={member.status === 'Active' ? 'active' : 'inactive'}>{member.status}</Badge></td><td className="whitespace-nowrap px-3 py-3 text-xs text-slate-600">{formatDate(member.created_at)}</td></tr>)}</tbody></table></div>}
           </article>
 
           <article className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm">

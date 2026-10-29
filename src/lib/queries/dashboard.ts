@@ -175,11 +175,15 @@ export async function getBirthdays(): Promise<{ today: BirthdayMember[]; upcomin
 }
 
 export async function getRecentContacts(limit = 10): Promise<Member[]> {
-  const { data, error } = await supabase
+  const run = async (columns: string) => await supabase
     .from('members')
-    .select(dashboardMemberColumns)
+    .select(columns)
     .order('created_at', { ascending: false })
     .limit(Math.max(1, limit));
+  // Photo columns may be missing or not granted, so retry without them.
+  let { data, error } = await run(`${dashboardMemberColumns},photo_url,passport_picture`);
+  if (error) ({ data, error } = await run(`${dashboardMemberColumns},photo_url`));
+  if (error) ({ data, error } = await run(dashboardMemberColumns));
   if (error) throw error;
   return (data ?? []) as unknown as Member[];
 }
