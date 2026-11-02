@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient';
 import type { Group, Member, MemberFilters, MemberFormInput, MemberProfile, MemberRelationship } from '../../types/member';
 
-const memberColumns = 'id,member_code,title,surname,first_name,maiden_name,marriage_type,spouse_name,spouse_phone,spouse_postal_address,children_names,children_contacts,sex,date_of_birth,mobile_phone,phone,other_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at,primary_generational_group,generational_group,family_group,church_family_group,photo_url';
+const memberColumns = 'id,member_code,title,surname,first_name,marriage_type,spouse_name,spouse_phone,spouse_postal_address,children_names,children_contacts,sex,date_of_birth,mobile_phone,phone,other_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at,primary_generational_group,generational_group,family_group,church_family_group,photo_url';
 
 // Columns added outside the migrations (Google Form feed). Requested in the fallback so aliases still load
 // when column-level grants reject '*'; a further fallback drops them if they are not readable either.
@@ -111,7 +111,7 @@ export async function deleteMember(id: string): Promise<void> {
 }
 
 const memberPayloadColumns = [
-  'title', 'title_other', 'member_code', 'spouse_name', 'spouse_phone', 'spouse_postal_address', 'children_names', 'children_contacts', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
+  'title', 'title_other', 'member_code', 'spouse_name', 'spouse_phone', 'spouse_postal_address', 'children_names', 'children_contacts', 'surname',   'first_name', 'sex', 'date_of_birth',
   'date_of_birth_is_estimated', 'communicant_status', 'marital_status', 'marriage_type',
   'profession', 'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality',
   'residence_area', 'residence_description', 'house_number', 'street_name', 'postal_address',
@@ -128,7 +128,6 @@ function toMemberPayload(input: MemberFormInput) {
     surname: input.surname.trim(),
     member_code: input.member_code?.trim() || null,
     first_name: input.first_name.trim(),
-    maiden_name: nullableText(input.maiden_name),
     sex: input.sex,
     date_of_birth: input.date_of_birth,
     date_of_birth_is_estimated: input.date_of_birth_is_estimated,
@@ -343,7 +342,7 @@ async function syncSpouseContact(memberId: string, input: MemberFormInput): Prom
 
 export async function getMemberById(id: string, includeAdminNotes = false): Promise<MemberProfile> {
   const memberColumns = [
-    'id', 'member_code', 'spouse_name', 'spouse_phone', 'spouse_postal_address', 'children_names', 'children_contacts', 'title', 'title_other', 'surname', 'first_name', 'maiden_name', 'sex', 'date_of_birth',
+    'id', 'member_code', 'spouse_name', 'spouse_phone', 'spouse_postal_address', 'children_names', 'children_contacts', 'title', 'title_other', 'surname',     'first_name', 'sex', 'date_of_birth',
     'date_of_birth_is_estimated', 'communicant_status', 'marital_status', 'marriage_type', 'profession',
     'occupation', 'special_interests', 'home_town', 'place_of_birth', 'nationality', 'residence_area',
     'residence_description', 'house_number', 'street_name', 'postal_address', 'residential_phone',

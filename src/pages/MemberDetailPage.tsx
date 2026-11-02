@@ -251,8 +251,7 @@ export default function MemberDetailPage() {
 
         {tab === 'Overview' && <div className="space-y-7 p-5 sm:p-7">
           <div><h2 className="mb-2 font-semibold text-slate-900">Personal Information</h2><InfoGrid items={[
-            ['Membership ID', getMembershipId(member)], ['Title', firstText(member, ['title', 'Title'])], ['First Name', firstText(member, ['first_name', 'First Name'])], ['Surname', firstText(member, ['surname', 'last_name', 'Surname', 'Last Name'])], ['Maiden Name', firstText(member, ['maiden_name', 'Maiden Name'])],
-            ['Sex', firstText(member, ['sex', 'gender', 'Sex', 'Gender'])], ['Date of Birth', formatDate(firstText(member, ['date_of_birth', 'Date of Birth']))], ['Date of Birth Estimated', firstBool(member, ['date_of_birth_is_estimated', 'is_dob_estimated']) ? 'Yes' : 'No'],
+            ['Membership ID', getMembershipId(member)], ['Title', firstText(member, ['title', 'Title'])], ['First Name', firstText(member, ['first_name', 'First Name'])], ['Surname', firstText(member, ['surname', 'last_name', 'Surname', 'Last Name'])],             ['Sex', firstText(member, ['sex', 'gender', 'Sex', 'Gender'])], ['Date of Birth', formatDate(firstText(member, ['date_of_birth', 'Date of Birth']))], ['Date of Birth Estimated', firstBool(member, ['date_of_birth_is_estimated', 'is_dob_estimated']) ? 'Yes' : 'No'],
             ['Communicant Status', firstText(member, ['communicant_status', 'Communicant Status']) || (firstBool(member, ['is_communicant']) === undefined ? '' : firstBool(member, ['is_communicant']) ? 'Communicant' : 'Non-Communicant')], ['Marital Status', firstText(member, ['marital_status', 'Marital Status'])], ['Marriage Type', firstText(member, ['marriage_type', 'Marriage Type'])],
             ['Profession', firstText(member, ['profession', 'Profession'])], ['Occupation', firstText(member, ['occupation', 'Occupation'])], ['Special Interests', firstText(member, ['special_interests', 'Special Interests'])],
           ]} /></div>
@@ -308,7 +307,7 @@ export default function MemberDetailPage() {
             ['Children Contacts', firstText(member, ['children_contacts', 'Children Contacts'])],
             ['Parent/Guardian Name', parentGuardianName],
             ['Relationship Type', familyRelationshipType],
-            ['Maiden Name', firstText(member, ['maiden_name', 'Maiden Name'])],
+
             ['Marriage Type', firstText(member, ['marriage_type', 'Marriage Type'])],
             ['Spouse Postal Address', firstText(member, ['spouse_postal_address', 'Spouse Postal Address']) || spouseContact?.postal_address],
           ]} /></div>

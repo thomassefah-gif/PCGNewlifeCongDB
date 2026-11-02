@@ -26,7 +26,6 @@ export interface Member {
   title_other: string | null;
   surname: string | null;
   first_name: string | null;
-  maiden_name?: string | null;
   sex?: Sex | null;
   date_of_birth: string | null;
   date_of_birth_is_estimated: boolean;
@@ -157,7 +156,6 @@ export interface MemberFormInput {
   title_other: string;
   surname: string;
   first_name: string;
-  maiden_name: string;
   sex: Sex | '';
   date_of_birth: string;
   date_of_birth_is_estimated: boolean;

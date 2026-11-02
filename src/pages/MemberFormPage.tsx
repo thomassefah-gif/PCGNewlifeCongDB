@@ -28,7 +28,6 @@ const formSchema = z.object({
   title_other: z.string(),
   surname: z.string().refine((value) => value.trim().length > 0, 'Surname is required.'),
   first_name: z.string().refine((value) => value.trim().length > 0, 'First name is required.'),
-  maiden_name: z.string(),
   sex: requiredChoice(['Male', 'Female'] as const, 'Select sex.'),
   date_of_birth: z.string().min(1, 'Date of birth is required.'),
   date_of_birth_is_estimated: z.boolean(),
@@ -78,7 +77,7 @@ type ParentOption = Pick<Member, 'id' | 'title' | 'first_name' | 'surname' | 'em
 const defaults: MemberFormInput = {
   spouse_name: '', spouse_phone: '', spouse_postal_address: '', children_names: '', children_contacts: '',
   member_code: '',
-  title: '', title_other: '', surname: '', first_name: '', maiden_name: '', sex: '', date_of_birth: '',
+  title: '', title_other: '', surname: '', first_name: '', sex: '', date_of_birth: '',
   date_of_birth_is_estimated: false, communicant_status: '', marital_status: '', marriage_type: '',
   profession: '', occupation: '', special_interests: '', home_town: '', place_of_birth: '', nationality: '',
   residence_area: '', residence_description: '', house_number: '', street_name: '', postal_address: '',
@@ -117,7 +116,7 @@ function profileToForm(member: MemberProfile): MemberFormInput {
     spouse_postal_address: text(member.spouse_postal_address ?? spouse?.postal_address),
     children_names: t('children_names', 'Children Names'), children_contacts: t('children_contacts', 'Children Contacts'),
     member_code: getMembershipId(member), title_other: text(member.title_other), surname: t('surname', 'last_name'),
-    first_name: t('first_name', 'First Name'), maiden_name: t('maiden_name', 'Maiden Name'), sex: normalizedSex,
+    first_name: t('first_name', 'First Name'), sex: normalizedSex,
     date_of_birth: text(member.date_of_birth), date_of_birth_is_estimated: dobEstimated ?? false,
     communicant_status: member.communicant_status ?? (firstBool(member, ['is_communicant']) === undefined ? '' : firstBool(member, ['is_communicant']) ? 'Communicant' : 'Non-Communicant'), marital_status: member.marital_status ?? '',
     marriage_type: t('marriage_type', 'Marriage Type') === 'Ordinance' ? 'Church Ordinance' : t('marriage_type', 'Marriage Type'),
@@ -184,7 +183,6 @@ export default function MemberFormPage() {
   });
   const primaryGroupId = useWatch({ control, name: 'primary_group_id' });
   const maritalStatus = useWatch({ control, name: 'marital_status' });
-  const sex = useWatch({ control, name: 'sex' });
   const photoUrl = useWatch({ control, name: 'photo_url' });
   const primaryGroup = useMemo(() => groups.find((group) => group.id === primaryGroupId), [groups, primaryGroupId]);
   const isYouth = ['Children Service', 'Junior Youth (JY)'].includes(primaryGroup?.name ?? '');
@@ -419,7 +417,7 @@ export default function MemberFormPage() {
       <section className="space-y-5 rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm sm:p-6">
         <div><h2 className="font-semibold text-slate-900">Personal Information</h2><p className="mt-1 text-sm text-slate-500">Basic identity and church membership details.</p></div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Membership ID"><input className={inputClass} {...register('member_code')} /></Field>
+          <Field label="Membership ID"><input className={inputClass} readOnly placeholder="Auto-generated on save" {...register('member_code')} /></Field>
           <Field label="Title"><input className={inputClass} placeholder="e.g. Mr, Mrs, Rev" {...register('title')} /></Field>
           {watch('title') === 'Other' && <Field label="Other title"><input className={inputClass} {...register('title_other')} /></Field>}
           <Field label="First Name" required error={errors.first_name?.message}><input className={inputClass} autoComplete="given-name" {...register('first_name')} /></Field>
@@ -482,7 +480,6 @@ export default function MemberFormPage() {
                 <option value="">Select marital status</option><option>Married</option><option>Single</option><option>Divorced</option><option>Widow</option><option>Widower</option><option>Co-habiting</option>
               </select>
             </Field>
-            {sex === 'Female' && isMarried && <Field label="Maiden Name"><input className={inputClass} {...register('maiden_name')} /></Field>}
             {isMarried && <Field label="Marriage Type"><select className={selectClass} {...register('marriage_type')}><option value="">Select type</option><option>Customary</option><option>Church Ordinance</option><option>Civil Registry</option></select></Field>}
             <Field label="Profession"><input className={inputClass} {...register('profession')} /></Field>
             <Field label="Occupation"><input className={inputClass} {...register('occupation')} /></Field>
