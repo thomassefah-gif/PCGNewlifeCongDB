@@ -8,7 +8,7 @@ import Button from '../components/ui/Button';
 import { useToast } from '../components/ui/Toast';
 import { supabase } from '../lib/supabaseClient';
 import { getCustomFields, getMemberCustomFieldValues, upsertMemberCustomFieldValues, type CustomField } from '../lib/queries/customFields';
-import { createMember, getAllGroups, getMemberById, searchMembers, updateMember } from '../lib/queries/members';
+import { createMember, getAllGroups, getMemberById, getMemberCodeById, peekNextMemberCode, searchMembers, updateMember } from '../lib/queries/members';
 import { firstBool, firstText, getFamilyGroup, getMemberLandmark, getMemberPhotoUrl, getMembershipId, getMobilePhone, getOtherPhone, getPrimaryGenerationalGroup, getResidenceArea, getSacramentValue, type SacramentKey } from '../lib/memberFields';
 import MemberAvatar from '../components/MemberAvatar';
 import { syncToGoogleSheet } from '../lib/googleSheetSync';
@@ -189,6 +189,13 @@ export default function MemberFormPage() {
   const isMarried = maritalStatus === 'Married' && !isYouth;
 
   useEffect(() => {
+    if (id) return;
+    let mounted = true;
+    void peekNextMemberCode().then((code) => { if (mounted && code) setValue('member_code', code); });
+    return () => { mounted = false; };
+  }, [id, setValue]);
+
+  useEffect(() => {
     let mounted = true;
     setLoading(true);
     const loadFormData = async () => {
@@ -295,17 +302,19 @@ export default function MemberFormPage() {
     }
     setSaving(true);
     try {
-      const payload = { ...values, primary_group_name: primaryGroup?.name ?? '' };
+      const payload = { ...values, primary_group_name: primaryGroup?.name ?? '', member_code: isEditing ? values.member_code : '' };
       const memberId = isEditing && id ? (await updateMember(id, payload), id) : await createMember(payload);
+      const memberCode = (await getMemberCodeById(memberId)) || payload.member_code;
       void syncToGoogleSheet(isEditing ? 'update' : 'create', {
         ...payload,
+        member_code: memberCode,
         id: memberId,
         last_name: payload.surname,
         phone_number: payload.mobile_phone,
         other_phone_number: payload.residential_phone,
         area_description: payload.residence_description,
         landmark: payload.residence_description,
-        membership_id: payload.member_code,
+        membership_id: memberCode,
       }, originalMemberRef.current);
       try {
         await upsertMemberCustomFieldValues(memberId, Object.fromEntries(customFields.map((field) => [field.field_key, customValues[field.field_key] ?? (field.field_type.toLowerCase() === 'boolean' ? false : '')])));

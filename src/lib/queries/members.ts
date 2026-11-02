@@ -468,6 +468,16 @@ async function saveAdminNotes(id: string, notes: string | null): Promise<void> {
   if (error) throw error;
 }
 
+export async function peekNextMemberCode(): Promise<string> {
+  const { data, error } = await supabase.rpc('peek_next_member_code');
+  return error ? '' : String(data ?? '');
+}
+
+export async function getMemberCodeById(id: string): Promise<string> {
+  const { data } = await supabase.from('members').select('member_code').eq('id', id).maybeSingle();
+  return (data?.member_code as string | null | undefined) ?? '';
+}
+
 export async function createMember(input: MemberFormInput): Promise<string> {
   const aliases = await buildAliasPayload(input);
   const created = await writeWithAliases<{ id: string }>(
