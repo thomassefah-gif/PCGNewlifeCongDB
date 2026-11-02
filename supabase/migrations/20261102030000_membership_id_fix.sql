@@ -1,4 +1,4 @@
--- Self-contained, idempotent Membership ID setup (PCG/LC/001, PCG/LC/002, ...).
+-- Self-contained, idempotent Membership ID setup (PCG/NLC/001, PCG/NLC/002, ...).
 -- Safe to run even if the earlier membership migrations failed or were never run.
 
 alter table public.members add column if not exists member_code text;
@@ -13,17 +13,17 @@ language sql
 security definer
 set search_path = public
 as $$
-  select 'PCG/LC/' || lpad(nextval('public.member_code_seq')::text, 3, '0');
+  select 'PCG/NLC/' || lpad(nextval('public.member_code_seq')::text, 3, '0');
 $$;
 
 -- Normalise older codes and carry over a code that only exists in membership_id.
-update public.members set member_code = regexp_replace(member_code, '^PCG/NLC/', 'PCG/LC/') where member_code like 'PCG/NLC/%';
+update public.members set member_code = regexp_replace(member_code, '^PCG/LC/', 'PCG/NLC/') where member_code like 'PCG/LC/%';
 update public.members set member_code = nullif(btrim(membership_id), '') where (member_code is null or btrim(member_code) = '') and nullif(btrim(membership_id), '') is not null;
 
 do $$
 declare max_existing integer;
 begin
-  select coalesce(max(substring(member_code from '^PCG/LC/(\d+)$')::integer), 0) into max_existing from public.members;
+  select coalesce(max(substring(member_code from '^PCG/NLC/(\d+)$')::integer), 0) into max_existing from public.members;
   perform setval('public.member_code_seq', greatest(max_existing, 1), max_existing > 0);
 
   update public.members m
@@ -68,7 +68,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select 'PCG/LC/' || lpad((select case when is_called then last_value + 1 else last_value end from public.member_code_seq)::text, 3, '0');
+  select 'PCG/NLC/' || lpad((select case when is_called then last_value + 1 else last_value end from public.member_code_seq)::text, 3, '0');
 $$;
 
 grant execute on function public.peek_next_member_code() to authenticated;

@@ -1,16 +1,16 @@
--- Membership ID pattern: PCG/LC/001, PCG/LC/002, ...
+-- Membership ID pattern: PCG/NLC/001, PCG/NLC/002, ...
 create sequence if not exists public.member_code_seq;
 
--- Convert any codes created with the earlier PCG/NLC/ prefix.
+-- Convert any codes created with the PCG/LC/ prefix.
 update public.members
-   set member_code = regexp_replace(member_code, '^PCG/NLC/', 'PCG/LC/')
- where member_code like 'PCG/NLC/%';
+   set member_code = regexp_replace(member_code, '^PCG/LC/', 'PCG/NLC/')
+ where member_code like 'PCG/LC/%';
 
 create or replace function public.next_member_code()
 returns text
 language sql
 as $$
-  select 'PCG/LC/' || lpad(nextval('public.member_code_seq')::text, 3, '0');
+  select 'PCG/NLC/' || lpad(nextval('public.member_code_seq')::text, 3, '0');
 $$;
 
 do $$
@@ -18,7 +18,7 @@ declare
   max_existing integer;
   has_alias boolean;
 begin
-  select coalesce(max(substring(member_code from '^PCG/LC/(\d+)$')::integer), 0)
+  select coalesce(max(substring(member_code from '^PCG/NLC/(\d+)$')::integer), 0)
     into max_existing from public.members;
   perform setval('public.member_code_seq', greatest(max_existing, 1), max_existing > 0);
 
@@ -68,7 +68,7 @@ returns text
 language sql
 stable
 as $$
-  select 'PCG/LC/' || lpad((
+  select 'PCG/NLC/' || lpad((
     select case when is_called then last_value + 1 else last_value end
       from public.member_code_seq
   )::text, 3, '0');
