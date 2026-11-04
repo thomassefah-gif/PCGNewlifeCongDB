@@ -7,11 +7,9 @@ import Button from '../components/ui/Button';
 import EmptyState from '../components/ui/EmptyState';
 import ExportButton from '../components/ui/ExportButton';
 import MemberAvatar from '../components/MemberAvatar';
-import BarCard from '../components/charts/BarCard';
-import DonutCard from '../components/charts/DonutCard';
 import { useToast } from '../components/ui/Toast';
 import { calculateAge, formatDate } from '../lib/date';
-import { getBirthdays, getDashboardMetrics, getGroupDistributionMetrics, getRecentContacts, type BirthdayMember, type DashboardDateRange, type DashboardMetrics, type GroupDistribution } from '../lib/queries/dashboard';
+import { getBirthdays, getDashboardMetrics, getRecentContacts, type BirthdayMember, type DashboardDateRange, type DashboardMetrics } from '../lib/queries/dashboard';
 import { supabase } from '../lib/supabaseClient';
 import type { Member } from '../types/member';
 
@@ -19,8 +17,6 @@ type DatePreset = 'all' | 'this-year' | 'last-year' | 'last-2' | 'last-5' | 'cus
 type BirthdayTab = 'today' | 'upcoming';
 
 const emptyMetrics: DashboardMetrics = { totalMembers: 0, activeMembers: 0, inactiveMembers: 0, distantMembers: 0, residentMembers: 0, newMembers: 0, maleMembers: 0, femaleMembers: 0 };
-const emptyDistribution: GroupDistribution = { generational: [], interest: [], family: [] };
-
 function currentRange(preset: Exclude<DatePreset, 'all' | 'custom'>, now = new Date()): DashboardDateRange {
   const currentYear = now.getFullYear();
   if (preset === 'this-year') return { from: format(startOfYear(now), 'yyyy-MM-dd'), to: format(now, 'yyyy-MM-dd') };
@@ -64,7 +60,6 @@ export default function DashboardPage() {
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
-  const [distribution, setDistribution] = useState<GroupDistribution>(emptyDistribution);
   const [recentContacts, setRecentContacts] = useState<Member[]>([]);
   const [birthdaysToday, setBirthdaysToday] = useState<BirthdayMember[]>([]);
   const [upcomingBirthdays, setUpcomingBirthdays] = useState<BirthdayMember[]>([]);
@@ -82,14 +77,12 @@ export default function DashboardPage() {
     setLoading(true);
     setLoadError(false);
     try {
-      const [nextMetrics, nextDistribution, recent, birthdays] = await Promise.all([
+      const [nextMetrics, recent, birthdays] = await Promise.all([
         getDashboardMetrics(dateRange),
-        getGroupDistributionMetrics(dateRange),
         getRecentContacts(10),
         getBirthdays(),
       ]);
       setMetrics(nextMetrics);
-      setDistribution(nextDistribution);
       setRecentContacts(recent);
       setBirthdaysToday(birthdays.today);
       setUpcomingBirthdays(birthdays.upcoming);
@@ -170,14 +163,7 @@ export default function DashboardPage() {
         <MetricCard to={linkFor('female')} label="Total Females" value={metrics.femaleMembers} icon={UserRound} tone="bg-pink-50 text-pink-700" detail={dateLabel} />
       </section>
 
-      {loading && metrics.totalMembers === 0 ? <div className="animate-pulse rounded-2xl border border-stone-200 bg-white px-6 py-14 text-center text-sm font-medium text-slate-500">Loading dashboard analytics...</div> : <>
-        <section aria-label="Membership analytics charts" className="grid gap-4 xl:grid-cols-2">
-          <BarCard title="Enrollments per Group" description="Active membership in generational groups within selected period" data={distribution.generational} />
-          <DonutCard title="Contacts by Status" data={[{ name: 'Active', value: metrics.activeMembers, color: '#1D4ED8' }, { name: 'Inactive', value: metrics.inactiveMembers, color: '#94A3B8' }]} />
-          <BarCard title="Interest Groups Breakdown" description="Active interest group memberships within selected period" data={distribution.interest} color="#1D4ED8" />
-          <BarCard title="Family Groups Breakdown" description="Active family group memberships within selected period" data={distribution.family} color="#1D4ED8" />
-        </section>
-
+      {loading && metrics.totalMembers === 0 ? <div className="animate-pulse rounded-2xl border border-stone-200 bg-white px-6 py-14 text-center text-sm font-medium text-slate-500">Loading dashboard...</div> : <>
         <section className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,.75fr)]">
           <article className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-5 py-4"><div><h2 className="font-semibold text-slate-900">Recent Contacts</h2><p className="mt-0.5 text-xs text-slate-500">Latest member records added to the directory</p></div><ExportButton<Member> data={recentContacts} filename="recent_contacts" label="Export Recent (CSV)" isMemberData size="sm" /></div>
