@@ -52,7 +52,7 @@ export default function Sidebar({ mobileOpen, onNavigate }: SidebarProps) {
       <div className="flex shrink-0 items-center gap-3 px-2 pb-8">
         {!logoUnavailable ? (
           <img
-            src="/LogoImg/presbylogo.png"
+            src="/logo.jpg"
             alt="New Life Congregation shield"
             className="h-12 w-12 rounded-xl bg-white object-contain p-1"
             onError={() => setLogoUnavailable(true)}

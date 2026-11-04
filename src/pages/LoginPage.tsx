@@ -40,7 +40,7 @@ export default function LoginPage() {
       <section className="w-full max-w-md overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-soft">
         <div className="bg-primary px-7 py-8 text-center text-white sm:px-10">
           <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white p-2 text-primary">
-            {logoUnavailable ? <Church aria-hidden="true" size={30} /> : <img src="/LogoImg/presbylogo.png" alt="Presbyterian Church of Ghana logo" className="h-full w-full object-contain" onError={() => setLogoUnavailable(true)} />}
+            {logoUnavailable ? <Church aria-hidden="true" size={30} /> : <img src="/logo.jpg" alt="Presbyterian Church of Ghana logo" className="h-full w-full object-contain" onError={() => setLogoUnavailable(true)} />}
           </div>
           <h1 className="mt-4 text-xl font-bold tracking-tight">New Life Congregation</h1>
           <p className="mt-1 text-sm text-white/75">Presbyterian Church of Ghana — Ga West Presbytery</p>
