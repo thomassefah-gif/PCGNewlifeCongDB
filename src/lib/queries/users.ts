@@ -33,6 +33,19 @@ export async function updateUserAssignedGroup(id: string, assigned_group: string
   if (error) throw error;
 }
 
+export async function createUserAccount(input: { fullName: string; email: string; password: string; role: UserRole; assignedGroup: string }): Promise<void> {
+  const { data, error } = await supabase.rpc('admin_create_user', {
+    p_email: input.email,
+    p_password: input.password,
+    p_full_name: input.fullName,
+    p_role: input.role,
+    p_assigned_group: input.assignedGroup || null,
+  });
+  if (error) throw error;
+  const result = data as { success?: boolean; error?: string } | null;
+  if (!result?.success) throw new Error(result?.error ?? 'Unable to create the account.');
+}
+
 export async function updateUserStatus(id: string, is_active: boolean): Promise<void> {
   const { error } = await supabase.from('profiles').update({ is_active }).eq('id', id);
   if (error) throw error;
