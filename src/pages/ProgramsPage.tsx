@@ -12,6 +12,7 @@ import ExportButton from '../components/ui/ExportButton';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../features/auth/AuthContext';
+import { restrictedGroup } from '../lib/permissions';
 import { deleteGroup, getGroupsByType, type GroupWithCount, updateGroup, createGroup } from '../lib/queries/groups';
 import { supabase } from '../lib/supabaseClient';
 import type { GroupType } from '../types/member';
@@ -37,7 +38,8 @@ function typeLabel(type: string): string {
 export default function ProgramsPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { role } = useAuth();
+  const { role, userGroup } = useAuth();
+  const scopeGroup = restrictedGroup(role, userGroup);
   const canManageGroups = role === 'admin' || role === 'user';
   const [activeType, setActiveType] = useState<GroupType>('generational');
   const [groups, setGroups] = useState<GroupWithCount[]>([]);
@@ -64,7 +66,8 @@ export default function ProgramsPage() {
         getGroupsByType('family'),
         getGroupsByType('custom'),
       ]);
-      const everyGroup = [...generational, ...interest, ...family, ...custom];
+      const everyGroup = [...generational, ...interest, ...family, ...custom]
+        .filter((group) => !scopeGroup || group.name.trim().toLowerCase() === scopeGroup.toLowerCase());
       setAllGroups(everyGroup);
       setGroups(everyGroup.filter((group) => group.group_type === activeType));
       setTotalCount(everyGroup.length);
@@ -74,7 +77,7 @@ export default function ProgramsPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeType, showToast]);
+  }, [activeType, scopeGroup, showToast]);
 
   useEffect(() => { void refreshGroups(); }, [refreshGroups]);
 

@@ -11,6 +11,8 @@ import { useToast } from '../components/ui/Toast';
 import { calculateAge, formatDate } from '../lib/date';
 import { getBirthdays, getDashboardMetrics, getRecentContacts, type BirthdayMember, type DashboardDateRange, type DashboardMetrics } from '../lib/queries/dashboard';
 import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../features/auth/AuthContext';
+import { restrictedGroup } from '../lib/permissions';
 import type { Member } from '../types/member';
 
 type DatePreset = 'all' | 'this-year' | 'last-year' | 'last-2' | 'last-5' | 'custom';
@@ -56,6 +58,8 @@ function MetricCard({ label, value, icon: Icon, tone, detail, to }: { label: str
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { role, userGroup } = useAuth();
+  const scopeGroup = restrictedGroup(role, userGroup);
   const [preset, setPreset] = useState<DatePreset>('all');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
@@ -78,9 +82,9 @@ export default function DashboardPage() {
     setLoadError(false);
     try {
       const [nextMetrics, recent, birthdays] = await Promise.all([
-        getDashboardMetrics(dateRange),
-        getRecentContacts(10),
-        getBirthdays(),
+        getDashboardMetrics(dateRange, scopeGroup),
+        getRecentContacts(10, scopeGroup),
+        getBirthdays(scopeGroup),
       ]);
       setMetrics(nextMetrics);
       setRecentContacts(recent);
@@ -92,7 +96,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [dateRange, showToast]);
+  }, [dateRange, scopeGroup, showToast]);
 
   useEffect(() => { void refreshDashboard(); }, [refreshDashboard]);
 

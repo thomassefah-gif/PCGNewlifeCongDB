@@ -32,6 +32,10 @@ export interface BirthdayMember extends Member {
 
 const dashboardMemberColumns = 'id,title,surname,first_name,sex,date_of_birth,mobile_phone,residential_phone,email,status,is_distant_member,date_joined_new_life,created_at';
 
+// Restricts a members query to one group via an inner join on member_groups/groups.
+const groupEmbed = ',member_groups!inner(groups!inner(name))';
+const GROUP_FILTER = 'member_groups.groups.name';
+
 async function getMemberIdsInRange(range: DashboardDateRange): Promise<string[]> {
   const ids: string[] = [];
   const pageSize = 1000;
@@ -47,9 +51,10 @@ async function getMemberIdsInRange(range: DashboardDateRange): Promise<string[]>
   }
 }
 
-export async function getDashboardMetrics(dateRange: DashboardDateRange = {}): Promise<DashboardMetrics> {
+export async function getDashboardMetrics(dateRange: DashboardDateRange = {}, group: string | null = null): Promise<DashboardMetrics> {
   const count = async (filter: { status?: 'Active' | 'Inactive'; isDistant?: boolean; sex?: 'Male' | 'Female' } = {}): Promise<number> => {
-    let query = supabase.from('members').select('id', { count: 'exact', head: true });
+    let query = supabase.from('members').select(group ? `id${groupEmbed}` : 'id', { count: 'exact', head: true });
+    if (group) query = query.eq(GROUP_FILTER, group);
     if (filter.sex) query = query.eq('sex', filter.sex);
     if (dateRange.from) query = query.gte('date_joined_new_life', dateRange.from);
     if (dateRange.to) query = query.lte('date_joined_new_life', dateRange.to);
@@ -126,17 +131,18 @@ export async function getGroupDistributionMetrics(dateRange: DashboardDateRange 
   };
 }
 
-async function getAllActiveBirthdays(): Promise<Member[]> {
+async function getAllActiveBirthdays(group: string | null): Promise<Member[]> {
   const result: Member[] = [];
   const pageSize = 1000;
   for (let offset = 0; ; offset += pageSize) {
-    const { data, error } = await supabase
+    let query = supabase
       .from('members')
-      .select(dashboardMemberColumns)
+      .select(group ? `${dashboardMemberColumns}${groupEmbed}` : dashboardMemberColumns)
       .eq('status', 'Active')
       .not('date_of_birth', 'is', null)
-      .order('surname', { ascending: true })
-      .range(offset, offset + pageSize - 1);
+      .order('surname', { ascending: true });
+    if (group) query = query.eq(GROUP_FILTER, group);
+    const { data, error } = await query.range(offset, offset + pageSize - 1);
     if (error) throw error;
     const rows = (data ?? []) as unknown as Member[];
     result.push(...rows);
@@ -157,11 +163,11 @@ function mapBirthday(member: Member, birthdayDate: Date, now: Date): BirthdayMem
   return { ...member, age_turning: ageTurning, birthday_date: format(birthdayDate, 'yyyy-MM-dd') };
 }
 
-export async function getBirthdays(): Promise<{ today: BirthdayMember[]; upcoming: BirthdayMember[] }> {
+export async function getBirthdays(group: string | null = null): Promise<{ today: BirthdayMember[]; upcoming: BirthdayMember[] }> {
   const now = new Date();
   const todayMonth = now.getMonth();
   const todayDay = now.getDate();
-  const activeMembers = await getAllActiveBirthdays();
+  const activeMembers = await getAllActiveBirthdays(group);
   const birthdays = activeMembers.flatMap((member) => {
     if (!member.date_of_birth) return [];
     const date = parseISO(member.date_of_birth);
@@ -181,12 +187,12 @@ export async function getBirthdays(): Promise<{ today: BirthdayMember[]; upcomin
   return { today, upcoming };
 }
 
-export async function getRecentContacts(limit = 10): Promise<Member[]> {
-  const run = async (columns: string) => await supabase
-    .from('members')
-    .select(columns)
-    .order('created_at', { ascending: false })
-    .limit(Math.max(1, limit));
+export async function getRecentContacts(limit = 10, group: string | null = null): Promise<Member[]> {
+  const run = async (columns: string) => {
+    let query = supabase.from('members').select(group ? `${columns}${groupEmbed}` : columns);
+    if (group) query = query.eq(GROUP_FILTER, group);
+    return await query.order('created_at', { ascending: false }).limit(Math.max(1, limit));
+  };
   // Photo columns may be missing or not granted, so retry without them.
   let { data, error } = await run(`${dashboardMemberColumns},photo_url,passport_picture`);
   if (error) ({ data, error } = await run(`${dashboardMemberColumns},photo_url`));
