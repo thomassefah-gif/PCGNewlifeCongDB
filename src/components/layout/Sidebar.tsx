@@ -20,7 +20,8 @@ export default function Sidebar({ mobileOpen, onNavigate }: SidebarProps) {
   const { showToast } = useToast();
   const visibleRoutes = routeItems.filter((item) =>
     (!item.adminOnly || role === 'admin')
-    && (!item.editorOnly || role === 'admin' || role === 'user'),
+    && (!item.editorOnly || role === 'admin' || role === 'user')
+    && !(role === 'group_leader' && ['/staff', '/contributions'].includes(item.path)),
   );
 
   const handleSignOut = async () => {

@@ -8,7 +8,7 @@ export function restrictedGroup(role?: UserRole | null, userGroup?: string | nul
 }
 
 export function canView(role?: UserRole | null): boolean {
-  return role === 'admin' || role === 'user' || role === 'viewer';
+  return role === 'admin' || role === 'user' || role === 'viewer' || role === 'group_leader';
 }
 
 export function canEdit(role?: UserRole | null): boolean {

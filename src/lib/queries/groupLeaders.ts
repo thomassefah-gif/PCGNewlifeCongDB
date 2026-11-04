@@ -10,14 +10,20 @@ export interface GroupLeader {
   created_at: string;
 }
 
-export const LEADER_GROUPS = [
-  'Children Service',
-  'Junior Youth (JY)',
-  "Young People's Guild (YPG)",
-  'Young Adults Fellowship (YAF)',
-  "Women's Fellowship",
-  "Men's Fellowship",
-] as const;
+export interface LeaderGroupOption {
+  name: string;
+  group_type: string;
+}
+
+export async function getLeaderGroupOptions(): Promise<LeaderGroupOption[]> {
+  const { data, error } = await supabase
+    .from('groups')
+    .select('name,group_type')
+    .eq('is_active', true)
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as LeaderGroupOption[];
+}
 
 // RPCs may return a JSON { success, error } payload instead of raising.
 function assertRpcResult(data: unknown, error: { message?: string } | null, fallback: string) {

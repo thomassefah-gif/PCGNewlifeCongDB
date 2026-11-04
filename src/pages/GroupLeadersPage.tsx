@@ -7,25 +7,28 @@ import EmptyState from '../components/ui/EmptyState';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../features/auth/AuthContext';
 import {
-  LEADER_GROUPS,
   createGroupLeader,
   deleteLeader,
   getGroupLeaders,
+  getLeaderGroupOptions,
   resetLeaderPassword,
   toggleLeaderActive,
   type GroupLeader,
+  type LeaderGroupOption,
 } from '../lib/queries/groupLeaders';
 
 const inputClass = 'h-10 w-full rounded-lg border border-stone-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10';
+const GROUP_TYPE_LABELS: Array<[string, string]> = [['generational', 'Generational Groups'], ['interest', 'Interest Groups'], ['family', 'Family Groups'], ['custom', 'Custom Groups']];
 
 export default function GroupLeadersPage() {
   const { role } = useAuth();
   const { showToast } = useToast();
   const [leaders, setLeaders] = useState<GroupLeader[]>([]);
+  const [groupOptions, setGroupOptions] = useState<LeaderGroupOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', assignedGroup: LEADER_GROUPS[0] as string });
+  const [form, setForm] = useState({ fullName: '', email: '', password: '', assignedGroup: '' });
   const [resetTarget, setResetTarget] = useState<GroupLeader | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<GroupLeader | null>(null);
@@ -44,6 +47,12 @@ export default function GroupLeadersPage() {
 
   useEffect(() => { void load(); }, [load]);
 
+  useEffect(() => {
+    void getLeaderGroupOptions()
+      .then(setGroupOptions)
+      .catch((error: unknown) => showToast(error instanceof Error ? error.message : 'Unable to load groups.', 'error'));
+  }, [showToast]);
+
   const run = async (id: string | null, action: () => Promise<void>, success: string) => {
     setBusyId(id);
     try {
@@ -61,10 +70,11 @@ export default function GroupLeadersPage() {
 
   const submitCreate = async (event: FormEvent) => {
     event.preventDefault();
+    if (!form.assignedGroup) { showToast('Choose a group for this leader.', 'error'); return; }
     setCreating(true);
     const ok = await run(null, () => createGroupLeader(form), 'Group leader created.');
     setCreating(false);
-    if (ok) setForm({ fullName: '', email: '', password: '', assignedGroup: LEADER_GROUPS[0] });
+    if (ok) setForm({ fullName: '', email: '', password: '', assignedGroup: '' });
   };
 
   const submitReset = async (event: FormEvent) => {
@@ -89,8 +99,12 @@ export default function GroupLeadersPage() {
           <input required aria-label="Full name" placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className={inputClass} />
           <input required type="email" aria-label="Email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} />
           <input required type="password" minLength={8} aria-label="Password" placeholder="Password (min 8 characters)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={inputClass} />
-          <select aria-label="Assigned group" value={form.assignedGroup} onChange={(e) => setForm({ ...form, assignedGroup: e.target.value })} className={inputClass}>
-            {LEADER_GROUPS.map((group) => <option key={group} value={group}>{group}</option>)}
+          <select required aria-label="Assigned group" value={form.assignedGroup} onChange={(e) => setForm({ ...form, assignedGroup: e.target.value })} className={inputClass}>
+            <option value="">Select group</option>
+            {GROUP_TYPE_LABELS.map(([type, label]) => {
+              const options = groupOptions.filter((group) => group.group_type === type && !/^no (family group|group membership)$/i.test(group.name.trim()));
+              return options.length ? <optgroup key={type} label={label}>{options.map((group) => <option key={group.name} value={group.name}>{group.name}</option>)}</optgroup> : null;
+            })}
           </select>
         </div>
         <div className="flex justify-end"><Button type="submit" loading={creating}>Create Leader</Button></div>
