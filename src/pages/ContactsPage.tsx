@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Edit3, Eye, Search, Trash2, UsersRound } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -11,6 +11,7 @@ import { useToast } from '../components/ui/Toast';
 import { calculateAge, formatDate } from '../lib/date';
 import { syncToGoogleSheet } from '../lib/googleSheetSync';
 import { getMobilePhone, getOtherPhone } from '../lib/memberFields';
+import { getBirthdays } from '../lib/queries/dashboard';
 import { deleteMember, getAllGroups, getAllMembers, getMembers } from '../lib/queries/members';
 import { exportToCSV } from '../lib/csv';
 import { supabase } from '../lib/supabaseClient';
@@ -20,6 +21,15 @@ import type { DistantFilter, Group, Member, MemberStatusFilter } from '../types/
 
 const PAGE_SIZE = 25;
 
+const VIEW_LABELS: Record<string, string> = {
+  active: 'Active contacts',
+  all: 'Total contacts',
+  distant: 'Distant members',
+  resident: 'Resident members',
+  birthday: 'Birthdays today',
+  new: 'New enrollments',
+};
+
 function memberName(member: Member): string {
   return [member.title, member.first_name, member.surname].filter(Boolean).join(' ') || 'Unnamed member';
 }
@@ -28,6 +38,8 @@ export default function ContactsPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { role, userGroup } = useAuth();
+  const [searchParams] = useSearchParams();
+  const view = searchParams.get('view') ?? '';
   const mayEdit = canEdit(role);
   const restricted = restrictedGroup(role, userGroup);
   const [members, setMembers] = useState<Member[]>([]);
@@ -35,9 +47,14 @@ export default function ContactsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<MemberStatusFilter>('ALL');
+  const [status, setStatus] = useState<MemberStatusFilter>(view === 'active' ? 'Active' : 'ALL');
   const [groupId, setGroupId] = useState('ALL');
-  const [distant, setDistant] = useState<DistantFilter>('ALL');
+  const [distant, setDistant] = useState<DistantFilter>(view === 'distant' ? 'DISTANT' : view === 'resident' ? 'NON_DISTANT' : 'ALL');
+  const joinedFrom = searchParams.get('from') || undefined;
+  const joinedTo = searchParams.get('to') || undefined;
+  // null = not a birthday view; [] while loading would show everyone, so wait for ids first.
+  const [birthdayIds, setBirthdayIds] = useState<string[] | null>(view === 'birthday' ? [] : null);
+  const [birthdaysReady, setBirthdaysReady] = useState(view !== 'birthday');
   const [loading, setLoading] = useState(true);
   const [groupsLoading, setGroupsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +68,13 @@ export default function ContactsPage() {
   const effectiveGroupId = restricted ? restrictedId ?? 'ALL' : groupId;
 
   const fetchMembers = useCallback(async () => {
+    if (!birthdaysReady) return;
+    if (birthdayIds && birthdayIds.length === 0) {
+      setMembers([]);
+      setTotalCount(0);
+      setLoading(false);
+      return;
+    }
     if (restricted) {
       if (groupsLoading) return;
       if (!restrictedId) {
@@ -64,7 +88,7 @@ export default function ContactsPage() {
     setLoading(true);
     setError(null);
     try {
-      const result = await getMembers({ page, pageSize: PAGE_SIZE, search, status, groupId: effectiveGroupId, distant });
+      const result = await getMembers({ page, pageSize: PAGE_SIZE, search, status, groupId: effectiveGroupId, distant, ids: birthdayIds ?? undefined, joinedFrom, joinedTo });
       if (requestId !== requestSequence.current) return;
       let filtered = result.members;
       if (restricted) {
@@ -86,11 +110,21 @@ export default function ContactsPage() {
     } finally {
       if (requestId === requestSequence.current) setLoading(false);
     }
-  }, [distant, effectiveGroupId, groupsLoading, page, restricted, restrictedId, search, showToast, status]);
+  }, [birthdayIds, birthdaysReady, distant, effectiveGroupId, groupsLoading, joinedFrom, joinedTo, page, restricted, restrictedId, search, showToast, status]);
 
   useEffect(() => {
     void fetchMembers();
   }, [fetchMembers]);
+
+  useEffect(() => {
+    if (view !== 'birthday') return;
+    let active = true;
+    void getBirthdays()
+      .then((result) => { if (active) setBirthdayIds(result.today.map((member) => member.id)); })
+      .catch(() => { if (active) { setBirthdayIds([]); showToast('Could not load birthdays.', 'error'); } })
+      .finally(() => { if (active) setBirthdaysReady(true); });
+    return () => { active = false; };
+  }, [view, showToast]);
 
   useEffect(() => {
     let active = true;
@@ -207,6 +241,11 @@ export default function ContactsPage() {
           </Button>}
         </div>
       </div>
+
+      {VIEW_LABELS[view] && <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-slate-700">
+        <span>Showing: <strong>{VIEW_LABELS[view]}</strong></span>
+        <button type="button" className="font-semibold text-primary hover:underline" onClick={() => { window.location.assign('/contacts'); }}>Clear filter</button>
+      </div>}
 
       <section aria-label="Member filters" className="grid gap-3 rounded-2xl border border-stone-200/80 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-[minmax(220px,1.5fr)_minmax(145px,.8fr)_minmax(165px,1fr)_minmax(190px,1.1fr)]">
         <label className="flex h-10 items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 text-slate-400 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10">

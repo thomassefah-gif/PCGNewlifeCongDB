@@ -210,4 +210,7 @@ export interface MemberFilters {
   status?: MemberStatusFilter;
   distant?: DistantFilter;
   groupId?: string;
+  ids?: string[];
+  joinedFrom?: string;
+  joinedTo?: string;
 }

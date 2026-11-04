@@ -52,6 +52,9 @@ export async function getMembers(filters: MemberFilters = {}): Promise<{ members
     if (filters.distant === 'DISTANT') query = query.eq('is_distant_member', true);
     if (filters.distant === 'NON_DISTANT') query = query.eq('is_distant_member', false);
     if (groupMemberIds) query = query.in('id', groupMemberIds);
+    if (filters.ids) query = query.in('id', filters.ids);
+    if (filters.joinedFrom) query = query.gte('date_joined_new_life', filters.joinedFrom);
+    if (filters.joinedTo) query = query.lte('date_joined_new_life', filters.joinedTo);
     return query.range(start, start + pageSize - 1);
   };
 

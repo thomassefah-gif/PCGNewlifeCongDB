@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Cake, CheckCircle2, Globe2, Home, TrendingUp, UsersRound } from 'lucide-react';
 import { endOfYear, format, startOfYear, subYears } from 'date-fns';
 import Badge from '../components/ui/Badge';
@@ -50,11 +50,11 @@ function birthdayGroups(members: BirthdayMember[]): Array<{ date: string; people
   return [...groups.entries()].map(([date, people]) => ({ date, people }));
 }
 
-function MetricCard({ label, value, icon: Icon, tone, detail }: { label: string; value: number; icon: typeof UsersRound; tone: string; detail?: string }) {
-  return <article className="rounded-2xl border border-stone-200/80 bg-white p-4 shadow-sm sm:p-5">
+function MetricCard({ label, value, icon: Icon, tone, detail, to }: { label: string; value: number; icon: typeof UsersRound; tone: string; detail?: string; to: string }) {
+  return <Link to={to} aria-label={`View ${label}`} className="block rounded-2xl border border-stone-200/80 bg-white p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:p-5">
     <div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="text-xs font-medium text-slate-500 sm:text-sm">{label}</p><p className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{value.toLocaleString()}</p></div><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone}`}><Icon aria-hidden="true" size={20} /></span></div>
     {detail && <p className="mt-2 text-[11px] text-slate-400">{detail}</p>}
-  </article>;
+  </Link>;
 }
 
 export default function DashboardPage() {
@@ -113,6 +113,12 @@ export default function DashboardPage() {
   }, [refreshDashboard]);
 
   const upcomingGroups = useMemo(() => birthdayGroups(upcomingBirthdays), [upcomingBirthdays]);
+  const linkFor = (view: string) => {
+    const params = new URLSearchParams({ view });
+    if (dateRange.from) params.set('from', dateRange.from);
+    if (dateRange.to) params.set('to', dateRange.to);
+    return `/contacts?${params.toString()}`;
+  };
   const dateLabel = preset === 'all' ? 'All time' : preset === 'custom' ? `${customFrom || 'Any start'} – ${customTo || 'Today'}` : preset === 'this-year' ? 'This year' : preset === 'last-year' ? 'Last year' : preset === 'last-2' ? 'Last 2 years' : 'Last 5 years';
 
   const birthdayExport = useMemo(() => [
@@ -154,12 +160,12 @@ export default function DashboardPage() {
       {loadError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger"><span>Some dashboard data could not be loaded.</span><Button size="sm" variant="outline" onClick={() => void refreshDashboard()}>Retry</Button></div>}
 
       <section aria-label="Church key metrics" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <MetricCard label="Active Contacts" value={metrics.activeMembers} icon={CheckCircle2} tone="bg-success/10 text-success" />
-        <MetricCard label="Total Contacts" value={metrics.totalMembers} icon={UsersRound} tone="bg-primary/10 text-primary" detail={dateLabel} />
-        <MetricCard label="Distant Members" value={metrics.distantMembers} icon={Globe2} tone="bg-warning/10 text-warning" />
-        <MetricCard label="Resident Members" value={metrics.residentMembers} icon={Home} tone="bg-sky-50 text-sky-700" />
-        <MetricCard label="Birthdays Today" value={birthdaysToday.length} icon={Cake} tone="bg-amber-50 text-amber-700" detail={birthdaysToday.length ? 'Celebrate with your church family' : undefined} />
-        <MetricCard label="New Enrollments" value={metrics.newMembers} icon={TrendingUp} tone="bg-primary/10 text-primaryDark" detail={dateLabel} />
+        <MetricCard to={linkFor('active')} label="Active Contacts" value={metrics.activeMembers} icon={CheckCircle2} tone="bg-success/10 text-success" />
+        <MetricCard to={linkFor('all')} label="Total Contacts" value={metrics.totalMembers} icon={UsersRound} tone="bg-primary/10 text-primary" detail={dateLabel} />
+        <MetricCard to={linkFor('distant')} label="Distant Members" value={metrics.distantMembers} icon={Globe2} tone="bg-warning/10 text-warning" />
+        <MetricCard to={linkFor('resident')} label="Resident Members" value={metrics.residentMembers} icon={Home} tone="bg-sky-50 text-sky-700" />
+        <MetricCard to="/contacts?view=birthday" label="Birthdays Today" value={birthdaysToday.length} icon={Cake} tone="bg-amber-50 text-amber-700" detail={birthdaysToday.length ? 'Celebrate with your church family' : undefined} />
+        <MetricCard to={linkFor('new')} label="New Enrollments" value={metrics.newMembers} icon={TrendingUp} tone="bg-primary/10 text-primaryDark" detail={dateLabel} />
       </section>
 
       {loading && metrics.totalMembers === 0 ? <div className="animate-pulse rounded-2xl border border-stone-200 bg-white px-6 py-14 text-center text-sm font-medium text-slate-500">Loading dashboard analytics...</div> : <>
