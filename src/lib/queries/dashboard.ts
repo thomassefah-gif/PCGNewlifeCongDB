@@ -15,6 +15,8 @@ export interface DashboardMetrics {
   distantMembers: number;
   residentMembers: number;
   newMembers: number;
+  maleMembers: number;
+  femaleMembers: number;
 }
 
 export interface GroupDistribution {
@@ -46,8 +48,9 @@ async function getMemberIdsInRange(range: DashboardDateRange): Promise<string[]>
 }
 
 export async function getDashboardMetrics(dateRange: DashboardDateRange = {}): Promise<DashboardMetrics> {
-  const count = async (filter: { status?: 'Active' | 'Inactive'; isDistant?: boolean } = {}): Promise<number> => {
+  const count = async (filter: { status?: 'Active' | 'Inactive'; isDistant?: boolean; sex?: 'Male' | 'Female' } = {}): Promise<number> => {
     let query = supabase.from('members').select('id', { count: 'exact', head: true });
+    if (filter.sex) query = query.eq('sex', filter.sex);
     if (dateRange.from) query = query.gte('date_joined_new_life', dateRange.from);
     if (dateRange.to) query = query.lte('date_joined_new_life', dateRange.to);
     if (filter.status) query = query.eq('status', filter.status);
@@ -57,12 +60,14 @@ export async function getDashboardMetrics(dateRange: DashboardDateRange = {}): P
     return total ?? 0;
   };
 
-  const [totalMembers, activeMembers, inactiveMembers, distantMembers, residentMembers] = await Promise.all([
+  const [totalMembers, activeMembers, inactiveMembers, distantMembers, residentMembers, maleMembers, femaleMembers] = await Promise.all([
     count(),
     count({ status: 'Active' }),
     count({ status: 'Inactive' }),
     count({ isDistant: true }),
     count({ isDistant: false }),
+    count({ sex: 'Male' }),
+    count({ sex: 'Female' }),
   ]);
   return {
     totalMembers,
@@ -71,6 +76,8 @@ export async function getDashboardMetrics(dateRange: DashboardDateRange = {}): P
     distantMembers,
     residentMembers,
     newMembers: totalMembers,
+    maleMembers,
+    femaleMembers,
   };
 }
 

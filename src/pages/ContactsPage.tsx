@@ -28,6 +28,8 @@ const VIEW_LABELS: Record<string, string> = {
   resident: 'Resident members',
   birthday: 'Birthdays today',
   new: 'New enrollments',
+  male: 'Males',
+  female: 'Females',
 };
 
 function memberName(member: Member): string {
@@ -88,7 +90,7 @@ export default function ContactsPage() {
     setLoading(true);
     setError(null);
     try {
-      const result = await getMembers({ page, pageSize: PAGE_SIZE, search, status, groupId: effectiveGroupId, distant, ids: birthdayIds ?? undefined, joinedFrom, joinedTo });
+      const result = await getMembers({ page, pageSize: PAGE_SIZE, search, status, groupId: effectiveGroupId, distant, ids: birthdayIds ?? undefined, sex: view === 'male' ? 'Male' : view === 'female' ? 'Female' : undefined, joinedFrom, joinedTo });
       if (requestId !== requestSequence.current) return;
       let filtered = result.members;
       if (restricted) {

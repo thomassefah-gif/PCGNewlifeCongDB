@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Cake, CheckCircle2, Globe2, Home, TrendingUp, UsersRound } from 'lucide-react';
+import { Cake, CheckCircle2, Globe2, Home, TrendingUp, User, UserRound, UsersRound } from 'lucide-react';
 import { endOfYear, format, startOfYear, subYears } from 'date-fns';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -18,7 +18,7 @@ import type { Member } from '../types/member';
 type DatePreset = 'all' | 'this-year' | 'last-year' | 'last-2' | 'last-5' | 'custom';
 type BirthdayTab = 'today' | 'upcoming';
 
-const emptyMetrics: DashboardMetrics = { totalMembers: 0, activeMembers: 0, inactiveMembers: 0, distantMembers: 0, residentMembers: 0, newMembers: 0 };
+const emptyMetrics: DashboardMetrics = { totalMembers: 0, activeMembers: 0, inactiveMembers: 0, distantMembers: 0, residentMembers: 0, newMembers: 0, maleMembers: 0, femaleMembers: 0 };
 const emptyDistribution: GroupDistribution = { generational: [], interest: [], family: [] };
 
 function currentRange(preset: Exclude<DatePreset, 'all' | 'custom'>, now = new Date()): DashboardDateRange {
@@ -159,13 +159,15 @@ export default function DashboardPage() {
 
       {loadError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger"><span>Some dashboard data could not be loaded.</span><Button size="sm" variant="outline" onClick={() => void refreshDashboard()}>Retry</Button></div>}
 
-      <section aria-label="Church key metrics" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <section aria-label="Church key metrics" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
         <MetricCard to={linkFor('active')} label="Active Contacts" value={metrics.activeMembers} icon={CheckCircle2} tone="bg-success/10 text-success" />
         <MetricCard to={linkFor('all')} label="Total Contacts" value={metrics.totalMembers} icon={UsersRound} tone="bg-primary/10 text-primary" detail={dateLabel} />
         <MetricCard to={linkFor('distant')} label="Distant Members" value={metrics.distantMembers} icon={Globe2} tone="bg-warning/10 text-warning" />
         <MetricCard to={linkFor('resident')} label="Resident Members" value={metrics.residentMembers} icon={Home} tone="bg-sky-50 text-sky-700" />
         <MetricCard to="/contacts?view=birthday" label="Birthdays Today" value={birthdaysToday.length} icon={Cake} tone="bg-amber-50 text-amber-700" detail={birthdaysToday.length ? 'Celebrate with your church family' : undefined} />
         <MetricCard to={linkFor('new')} label="New Enrollments" value={metrics.newMembers} icon={TrendingUp} tone="bg-primary/10 text-primaryDark" detail={dateLabel} />
+        <MetricCard to={linkFor('male')} label="Total Males" value={metrics.maleMembers} icon={User} tone="bg-blue-50 text-blue-700" detail={dateLabel} />
+        <MetricCard to={linkFor('female')} label="Total Females" value={metrics.femaleMembers} icon={UserRound} tone="bg-pink-50 text-pink-700" detail={dateLabel} />
       </section>
 
       {loading && metrics.totalMembers === 0 ? <div className="animate-pulse rounded-2xl border border-stone-200 bg-white px-6 py-14 text-center text-sm font-medium text-slate-500">Loading dashboard analytics...</div> : <>

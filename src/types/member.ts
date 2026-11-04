@@ -211,6 +211,7 @@ export interface MemberFilters {
   distant?: DistantFilter;
   groupId?: string;
   ids?: string[];
+  sex?: 'Male' | 'Female';
   joinedFrom?: string;
   joinedTo?: string;
 }
