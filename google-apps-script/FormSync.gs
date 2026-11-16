@@ -5,7 +5,8 @@
 var SUPABASE_URL = "https://wnchkbdfabqbjyuobgdz.supabase.co/rest/v1/members";
 var SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_KEY_HERE";
 
-var DATE_FIELDS = ["date_of_birth", "date_joined_new_life", "date_joined_pcg", "baptism_date", "confirmation_date"];
+// Dates: created_at = date enrolled = date added = when the form was filled (Timestamp).
+// date_joined_new_life = the date the person joined the church (answered on the form).
 
 // ==============================================================================
 // 1. BULK SYNC — push every existing row of the active sheet into Supabase
@@ -22,7 +23,8 @@ function syncAllExistingRows() {
     var payload = {};
     for (var c = 0; c < headers.length; c++) {
       var header = String(headers[c]).trim();
-      if (header === "Timestamp" || header === "") continue;
+      if (header === "Timestamp") { payload._filled_at = toIsoTimestamp_(data[r][c]); continue; }
+      if (header === "") continue;
       mapFieldToPayload(header, data[r][c], payload);
     }
     if (!payload.first_name && !payload.surname && !payload.email && !payload.mobile_phone) continue;
@@ -44,11 +46,12 @@ function onFormSubmit(e) {
 
   if (e.namedValues) {
     for (var title in e.namedValues) {
-      if (title === "Timestamp") continue;
       var raw = e.namedValues[title];
+      if (title === "Timestamp") { payload._filled_at = toIsoTimestamp_(Array.isArray(raw) ? raw[0] : raw); continue; }
       mapFieldToPayload(title, Array.isArray(raw) ? raw.join(", ") : raw, payload);
     }
   } else if (e.response && typeof e.response.getItemResponses === "function") {
+    payload._filled_at = toIsoTimestamp_(e.response.getTimestamp());
     var items = e.response.getItemResponses();
     for (var i = 0; i < items.length; i++) {
       var ans = items[i].getResponse();
@@ -155,6 +158,12 @@ function toIsoDate_(value) {
   var check = new Date(y, m - 1, d);
   if (check.getFullYear() !== y || check.getMonth() !== m - 1 || check.getDate() !== d) return null;
   return y + "-" + ("0" + m).slice(-2) + "-" + ("0" + d).slice(-2);
+}
+
+// Form Timestamp cell -> ISO timestamp (null if unreadable).
+function toIsoTimestamp_(value) {
+  var d = (Object.prototype.toString.call(value) === "[object Date]") ? value : new Date(value);
+  return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 // Sheets drop the leading 0 of phone numbers typed as numbers (246636026 -> 0246636026).
@@ -352,6 +361,8 @@ function sendToSupabase_(method, url, payload, extraHeaders) {
 
 function upsertMemberToSupabase(payload) {
   var existingId = null;
+  var filledAt = payload._filled_at;
+  delete payload._filled_at;
 
   if (payload.email) existingId = findMemberId_("email=eq." + encodeURIComponent(payload.email));
   if (!existingId && payload.mobile_phone) existingId = findMemberId_("mobile_phone=eq." + encodeURIComponent(payload.mobile_phone));
@@ -364,7 +375,7 @@ function upsertMemberToSupabase(payload) {
     payload.updated_at = new Date().toISOString();
     sendToSupabase_("patch", SUPABASE_URL + "?id=eq." + existingId, payload);
   } else {
-    payload.created_at = new Date().toISOString();
+    payload.created_at = filledAt || new Date().toISOString();
     sendToSupabase_("post", SUPABASE_URL, payload, { "Prefer": "return=minimal" });
   }
 }
