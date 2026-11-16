@@ -102,7 +102,7 @@ export default function ProgramDetailPage() {
   const exportedMembers = useMemo(() => memberships.map(({ members: member, joined_at, membership_status }) => ({
     ...member,
     group_membership_status: membership_status,
-    group_joined_at: joined_at,
+    group_joined_at: joined_at ?? member?.created_at,
   })), [memberships]);
 
   const handleAddMember = async () => {
@@ -184,7 +184,7 @@ export default function ProgramDetailPage() {
                 return <tr key={membership.id} className="transition-colors hover:bg-accent/50">
                   <td className="px-5 py-4"><div className="flex min-w-[210px] items-center gap-3"><MemberAvatar member={member} enlargeable /><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900">{joinedName(member)}</p><p className="truncate text-xs text-slate-500">{member.email || 'No email recorded'}</p></div></div></td>
                   <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">{member.mobile_phone || member.residential_phone || '—'}</td><td className="px-4 py-4 text-sm text-slate-600">{member.sex || '—'}</td><td className="px-4 py-4 text-sm text-slate-600">{calculateAge(member.date_of_birth) ?? '—'}</td>
-                  <td className="px-4 py-4"><Badge variant={membership.membership_status === 'Active' ? 'active' : 'inactive'}>{membership.membership_status}</Badge></td><td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">{formatDate(membership.joined_at)}</td>
+                  <td className="px-4 py-4"><Badge variant={membership.membership_status === 'Active' ? 'active' : 'inactive'}>{membership.membership_status}</Badge></td><td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">{formatDate(membership.joined_at ?? membership.members?.created_at)}</td>
                   <td className="px-4 py-4"><div className="flex justify-end gap-1"><button type="button" title="View profile" aria-label={`View ${joinedName(member)} profile`} onClick={() => navigate(`/contacts/${member.id}`)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Eye aria-hidden="true" size={17} /></button>{mayEdit && <><button type="button" title="Edit membership status" aria-label={`Edit ${joinedName(member)} membership status`} onClick={() => { setMembershipToEdit(membership); setNextStatus(membership.membership_status); }} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><Pencil aria-hidden="true" size={16} /></button><button type="button" title="Remove from group" aria-label={`Remove ${joinedName(member)} from group`} onClick={() => setMembershipToRemove(membership)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-primary/10 hover:text-primary"><UserMinus aria-hidden="true" size={17} /></button></>}</div></td>
                 </tr>;
               })}</tbody>
