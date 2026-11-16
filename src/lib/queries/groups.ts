@@ -19,8 +19,14 @@ export interface ProgramMember {
 
 export type GroupMembershipFilter = 'ALL' | 'Active' | 'Inactive';
 
+/** Links form-submitted members that have no group rows yet; failures must not block the page. */
+async function linkUnlinkedMembers(): Promise<void> {
+  try { await supabase.rpc('link_unlinked_members'); } catch { /* ignore */ }
+}
+
 async function attachActiveCounts(groups: Array<Omit<GroupWithCount, 'member_count'>>): Promise<GroupWithCount[]> {
   if (!groups.length) return [];
+  await linkUnlinkedMembers();
   return Promise.all(groups.map(async (group) => {
     const { count, error } = await supabase
       .from('member_groups')
